@@ -1,0 +1,1254 @@
+16
+
+Kernel Methods
+
+In the previous chapter we described the SVM paradigm for learning halfspaces in
+high dimensional feature spaces. This enables us to enrich the expressive power of
+halfspaces by ﬁrst mapping the data into a high dimensional feature space, and then
+learning a linear predictor in that space. This is similar to the AdaBoost algorithm,
+which learns a composition of a halfspace over base hypotheses. While this approach
+greatly extends the expressiveness of halfspace predictors, it raises both sample
+complexity and computational complexity challenges. In the previous chapter we
+tackled the sample complexity issue using the concept of margin. In this chapter we
+tackle the computational complexity challenge using the method of kernels.
+
+We start the chapter by describing the idea of embedding the data into a high
+dimensional feature space. We then introduce the idea of kernels. A kernel is a
+type of a similarity measure between instances. The special property of kernel sim-
+ilarities is that they can be viewed as inner products in some Hilbert space (or
+Euclidean space of some high dimension) to which the instance space is virtually
+embedded. We introduce the “kernel trick” that enables computationally efﬁcient
+implementation of learning, without explicitly handling the high dimensional rep-
+resentation of the domain instances. Kernel based learning algorithms, and in
+particular kernel-SVM, are very useful and popular machine learning tools. Their
+success may be attributed both to being ﬂexible for accommodating domain spe-
+ciﬁc prior knowledge and to having a well developed set of efﬁcient implementation
+algorithms.
+
+16.1 EMBEDDINGS INTO FEATURE SPACES
+The expressive power of halfspaces is rather restricted – for example, the following
+training set is not separable by a halfspace.
+Let the domain be the real line; consider the domain points {−10,−9,−8, . . . ,0,
+1, . . . ,9,10} where the labels are +1 for all x such that |x| > 2 and −1 otherwise.
+
+To make the class of halfspaces more expressive, we can ﬁrst map the original
+instance space into another space (possibly of a higher dimension) and then learn a
+halfspace in that space. For example, consider the example mentioned previously.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:51:54, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.017
+
+179
+
+180
+
+Kernel Methods
+
+Instead of learning a halfspace in the original representation let us ﬁrst deﬁne a
+mapping ψ : R → R2 as follows:
+
+ψ(x) = (x , x 2).
+
+We use the term feature space to denote the range of ψ. After applying ψ the
+data can be easily explained using the halfspace h(x) = sign((cid:7)w, ψ(x)(cid:8) − b), where
+w = (0, 1) and b = 5.
+
+The basic paradigm is as follows:
+1. Given some domain set X and a learning task, choose a mapping ψ : X → F,
+for some feature space F, that will usually be Rn for some n (however, the
+range of such a mapping can be any Hilbert space, including such spaces of
+inﬁnite dimension, as we will show later).
+2. Given a sequence of labeled examples, S = (x1, y1), . . . ,(xm , ym), create the
+image sequence ˆS = (ψ(x1), y1), . . . ,(ψ(xm), ym).
+3. Train a linear predictor h over ˆS.
+4. Predict the label of a test point, x, to be h(ψ(x)).
+Note that, for every probability distribution D over X × Y, we can readily
+deﬁne its image probability distribution Dψ over F ×Y by setting, for every subset
+A ⊆ F × Y, Dψ (A) = D(ψ−1(A)).1 It follows that for every predictor h over the
+feature space, LDψ (h) = LD(h ◦ ψ), where h ◦ ψ is the composition of h onto ψ.
+
+The success of this learning paradigm depends on choosing a good ψ for a given
+learning task: that is, a ψ that will make the image of the data distribution (close to
+being) linearly separable in the feature space, thus making the resulting algorithm a
+good learner for a given task. Picking such an embedding requires prior knowledge
+about that task. However, often some generic mappings that enable us to enrich
+the class of halfspaces and extend its expressiveness are used. One notable example
+is polynomial mappings, which are a generalization of the ψ we have seen in the
+previous example.
+Recall that the prediction of a standard halfspace classiﬁer on an instance x is
+based on the linear mapping x (cid:29)→ (cid:7)w,x(cid:8). We can generalize linear mappings to a
+polynomial mapping, x (cid:29)→ p(x), where p is a multivariate polynomial of degree
+k. For simplicity, consider ﬁrst the case in which x is 1 dimensional. In that case,
+w j x j , where w ∈ Rk+1 is the vector of coefﬁcients of the polynomial we
+need to learn. We can rewrite p(x) = (cid:7)w, ψ(x)(cid:8) where ψ : R → Rk+1 is the mapping
+x (cid:29)→ (1, x , x 2, x 3, . . . , x k). It follows that learning a k degree polynomial over R can
+be done by learning a linear mapping in the (k + 1) dimensional feature space.
+
+p(x) =(cid:2)
+
+k
+j=0
+
+More generally, a degree k multivariate polynomial from Rn to R can be
+
+written as
+
+(16.1)
+As before, we can rewrite p(x) = (cid:7)w, ψ(x)(cid:8) where now ψ : Rn → Rd is such that
+2
+for every J ∈ [n]r, r ≤ k, the coordinate of ψ(x) associated with J is the monomial
+r
+i=1 x Ji .
+
+J∈[n]r :r≤k
+
+x Ji .
+
+i=1
+
+wJ
+
+(cid:7)
+
+r(cid:8)
+
+p(x) =
+
+1 This is deﬁned for every A such that ψ−1(A) is measurable with respect to D.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:51:54, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.017
+
+16.2 The Kernel Trick
+
+181
+
+Naturally, polynomial-based classiﬁers yield much richer hypothesis classes than
+halfspaces. We have seen at the beginning of this chapter an example in which the
+training set, in its original domain (X = R), cannot be separable by a halfspace, but
+after the embedding x (cid:29)→ (x , x 2) it is perfectly separable. So, while the classiﬁer
+is always linear in the feature space, it can have highly nonlinear behavior on the
+original space from which instances were sampled.
+
+In general, we can choose any feature mapping ψ that maps the original
+instances into some Hilbert space.2 The Euclidean space Rd is a Hilbert space for
+any ﬁnite d. But there are also inﬁnite dimensional Hilbert spaces (as we shall see
+later on in this chapter).
+
+The bottom line of this discussion is that we can enrich the class of halfspaces by
+ﬁrst applying a nonlinear mapping, ψ, that maps the instance space into some fea-
+ture space, and then learning a halfspace in that feature space. However, if the range
+of ψ is a high dimensional space we face two problems. First, the VC-dimension of
+halfspaces in Rn is n + 1, and therefore, if the range of ψ is very large, we need
+many more samples in order to learn a halfspace in the range of ψ. Second, from
+the computational point of view, performing calculations in the high dimensional
+space might be too costly. In fact, even the representation of the vector w in the
+feature space can be unrealistic. The ﬁrst issue can be tackled using the paradigm
+of large margin (or low norm predictors), as we already discussed in the previous
+chapter in the context of the SVM algorithm. In the following section we address
+the computational issue.
+
+16.2 THE KERNEL TRICK
+We have seen that embedding the input space into some high dimensional feature
+space makes halfspace learning more expressive. However, the computational com-
+plexity of such learning may still pose a serious hurdle – computing linear separators
+over very high dimensional data may be computationally expensive. The common
+solution to this concern is kernel based learning. The term “kernels” is used in
+this context to describe inner products in the feature space. Given an embedding
+ψ of some domain space X into some Hilbert space, we deﬁne the kernel func-
+)(cid:8). One can think of K as specifying similarity between
+tion K (x,x(cid:3)
+instances and of the embedding ψ as mapping the domain set X into a space where
+these similarities are realized as inner products. It turns out that many learning algo-
+rithms for halfspaces can be carried out just on the basis of the values of the kernel
+function over pairs of domain points. The main advantage of such algorithms is that
+they implement linear separators in high dimensional feature spaces without hav-
+ing to specify points in that space or expressing the embedding ψ explicitly. The
+remainder of this section is devoted to constructing such algorithms.
+
+) = (cid:7)ψ(x), ψ(x(cid:3)
+
+2 A Hilbert space is a vector space with an inner product, which is also complete. A space is complete if
+all Cauchy sequences in the space converge. In our case, the norm (cid:9)w(cid:9) is deﬁned by the inner product
+√(cid:7)w,w(cid:8). The reason we require the range of ψ to be in a Hilbert space is that projections in a Hilbert
+space are well deﬁned. In particular, if M is a linear subspace of a Hilbert space, then every x in the
+Hilbert space can be written as a sum x = u+ v where u ∈ M and (cid:7)v,w(cid:8) = 0 for all w ∈ M. We use this
+fact in the proof of the representer theorem given in the next section.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:51:54, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.017
+
+182
+
+Kernel Methods
+
+4(cid:4)+ R((cid:9)w(cid:9))
+(cid:4)
+
+In the previous chapter we saw that regularizing the norm of w yields a small
+sample complexity even if the dimensionality of the feature space is high. Interest-
+ingly, as we show later, regularizing the norm of w is also helpful in overcoming the
+computational problem. To do so, ﬁrst note that all versions of the SVM optimiza-
+tion problem we have derived in the previous chapter are instances of the following
+general problem:
+
+(cid:3)
+
+(cid:3)3
+
+4
+
+3
+
+,
+
+f
+
+m
+
+, . . . ,
+
+min
+w
+
+w, ψ(x1)
+
+w, ψ(xm)
+
+(16.2)
+: Rm → R is an arbitrary function and R : R+ → R is a monotoni-
+where f
+(cid:2)
+cally nondecreasing function. For example, Soft-SVM for homogenous halfspaces
+(Equation (15.6)) can be derived from Equation (16.2) by letting R(a) = λa2 and
+i max{0,1 − yiai}. Similarly, Hard-SVM for nonhomogenous
+f (a1, . . . ,am) = 1
+halfspaces (Equation (15.2)) can be derived from Equation (16.2) by letting
+R(a) = a2 and letting f (a1, . . . ,am) be 0 if there exists b such that yi(ai + b) ≥ 1
+for all i, and f (a1, . . . ,am) = ∞ otherwise.
+The following theorem shows that
+Equation (16.2) that lies in the span of {ψ(x1), . . . , ψ(xm)}.
+Theorem 16.1 (Representer Theorem). Assume that ψ is a mapping from X to a
+αi ψ(xi ) is an
+
+Hilbert space. Then, there exists a vector α ∈ Rm such that w =(cid:2)
+
+there exists an optimal solution of
+
+m
+i=1
+
+optimal solution of Equation (16.2).
+
+Proof. Let w(cid:7) be an optimal solution of Equation (16.2). Because w(cid:7) is an element
+of a Hilbert space, we can rewrite w(cid:7) as
+
+w(cid:7) = m(cid:7)
+
+i=1
+
+αi ψ(xi )+ u,
+
+where (cid:7)u, ψ(xi )(cid:8) = 0 for all i. Set w = w(cid:7) − u. Clearly, (cid:9)w(cid:7)(cid:9)2 = (cid:9)w(cid:9)2 + (cid:9)u(cid:9)2,
+thus (cid:9)w(cid:9) ≤ (cid:9)w(cid:7)(cid:9). Since R is nondecreasing we obtain that R((cid:9)w(cid:9)) ≤ R((cid:9)w(cid:7)(cid:9)).
+Additionally, for all i we have that
+
+f
+
+y1
+
+(cid:3)
+
+3
+
+3
+
+4
+
+3
+
+hence
+
+, . . . , ym
+
+w, ψ(x1)
+
+w, ψ(xm)
+
+4(cid:4) = f
+
+yi(cid:7)w, ψ(xi )(cid:8) = yi(cid:7)w(cid:7) − u, ψ(xi )(cid:8) = yi(cid:7)w(cid:7), ψ(xi )(cid:8),
+4
+
+(cid:3)
+objective at w(cid:7) and therefore w is also an optimal solution. Since w =(cid:2)
+w =(cid:2)
+
+We have shown that the objective of Equation (16.2) at w cannot be larger than the
+αi ψ(xi )
+
+On the basis of the representer theorem we can optimize Equation (16.2)
+with respect to the coefﬁcients α instead of the coefﬁcients w as follows. Writing
+
+α j ψ(x j ) we have that for all i
+
+we conclude our proof.
+
+w(cid:7), ψ(xm)
+
+w(cid:7), ψ(x1)
+
+, . . . , ym
+
+4(cid:4)
+
+m
+i=1
+
+3
+
+y1
+
+.
+
+m
+j=1
+
+3
+
+"(cid:7)
+
+4 =
+
+j
+
+#
+
+= m(cid:7)
+
+j=1
+
+w, ψ(xi )
+
+α j ψ(x j ), ψ(xi )
+
+α j(cid:7)ψ(x j ), ψ(xi )(cid:8).
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:51:54, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.017
+
+Similarly,
+
+"(cid:7)
+
+j
+
+(cid:9)w(cid:9)2 =
+
+α j ψ(x j ),
+
+#
+
+α j ψ(x j )
+
+(cid:7)
+
+j
+
+= m(cid:7)
+
+i , j=1
+
+αi α j(cid:7)ψ(xi ), ψ(x j )(cid:8).
+
+16.2 The Kernel Trick
+
+183
+
+) = (cid:7)ψ(x), ψ(x(cid:3)
+)(cid:8) be a function that implements the kernel function with
+Let K (x, x(cid:3)
+respect to the embedding ψ. Instead of solving Equation (16.2) we can solve the
+⎛
+⎝ m(cid:7)
+equivalent problem
+⎛
+5667 m(cid:7)
+⎝
+
+α j K (x j ,x1), . . . ,
+
+α j K (x j ,xm)
+
+⎞
+⎠
+
+min
+α∈Rm
+
+j=1
+
+f
+
+m(cid:7)
+⎞
+⎠.
+
+j=1
+
+αi α j K (x j ,xi )
+
++ R
+
+(16.3)
+
+i , j=1
+
+To solve the optimization problem given in Equation (16.3), we do not need any
+direct access to elements in the feature space. The only thing we should know is
+how to calculate inner products in the feature space, or equivalently, to calculate
+the kernel function. In fact, to solve Equation (16.3) we solely need to know the
+value of the m × m matrix G s.t. Gi , j = K (xi ,x j ), which is often called the Gram
+matrix.
+
+In particular, specifying the preceding to the Soft-SVM problem given in
+
+Equation (15.6), we can rewrite the problem as
+
+(cid:26)
+
+(cid:27)
+
+min
+α∈Rm
+
+λαT Gα + 1
+m
+
+max{0,1− yi(Gα)i}
+
+,
+
+(16.4)
+
+m(cid:7)
+
+i=1
+
+where (Gα)i is the i’th element of the vector obtained by multiplying the Gram
+matrix G by the vector α. Note that Equation (16.4) can be written as quadratic
+programming and hence can be solved efﬁciently. In the next section we describe an
+even simpler algorithm for solving Soft-SVM with kernels.
+
+Once we learn the coefﬁcients α we can calculate the prediction on a new
+
+instance by
+
+(cid:7)w, ψ(x)(cid:8) = m(cid:7)
+
+α j(cid:7)ψ(x j ), ψ(x)(cid:8) = m(cid:7)
+
+j=1
+
+α j K (x j ,x).
+
+j=1
+
+The advantage of working with kernels rather than directly optimizing w in
+the feature space is that in some situations the dimension of the feature space
+is extremely large while implementing the kernel function is very simple. A few
+examples are given in the following.
+
+Example 16.1 (Polynomial Kernels). The k degree polynomial kernel is deﬁned
+to be
+
+K (x,x
+
+(cid:3)
+
+) = (1+(cid:7)x,x
+
+(cid:3)(cid:8))k.
+
+Now we will show that this is indeed a kernel function. That is, we will show that
+there exists a mapping ψ from the original space to some higher dimensional space
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:51:54, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.017
+
+184
+
+Kernel Methods
+
+for which K (x,x(cid:3)
+
+) =3
+
+K (x,x
+
+= 1. Then, we have
+(cid:3)(cid:8))
+
+⎛
+⎝ n(cid:7)
+
+(cid:3)
+0
+⎞
+(cid:3)(cid:8))····· (1+(cid:7)x,x
+⎠
+
+4
+. For simplicity, denote x0 = x
+ψ(x), ψ(x(cid:3)
+)
+⎞
+⎛
+) = (1+(cid:7)x,x
+(cid:3)(cid:8))k = (1+(cid:7)x,x
+(cid:3)
+⎝ n(cid:7)
+⎠·····
+(cid:7)
+k(cid:8)
+(cid:7)
+k(cid:8)
+
+J∈{0,1,...,n}k
+
+k(cid:8)
+
+x Ji x
+
+j=0
+
+j=0
+
+i=1
+
+x j x
+
+x j x
+
+=
+
+=
+
+(cid:3)
+Ji
+
+(cid:3)
+j
+
+(cid:3)
+j
+
+=
+
+J∈{0,1,...,n}k
+
+i=1
+
+x Ji
+
+x
+
+i=1
+
+(cid:3)
+Ji .
+
+Now, if we deﬁne ψ : Rn → R(n+1)k such that for J ∈ {0, 1, . . . ,n}k there is an element
+of ψ(x) that equals
+
+k
+i=1 x Ji , we obtain that
+
+2
+
+K (x,x
+
+(cid:3)
+
+) = (cid:7)ψ(x), ψ(x
+
+(cid:3)
+
+)(cid:8).
+
+Since ψ contains all the monomials up to degree k, a halfspace over the range
+of ψ corresponds to a polynomial predictor of degree k over the original space.
+Hence, learning a halfspace with a k degree polynomial kernel enables us to learn
+polynomial predictors of degree k over the original space.
+
+Note that here the complexity of implementing K is O(n) while the dimension
+
+of the feature space is on the order of nk.
+
+Example 16.2 (Gaussian Kernel). Let the original instance space be R and con-
+sider the mapping ψ where for each nonnegative integer n ≥ 0 there exists an
+element ψ(x)n that equals
+
+2 x n. Then,
+
+− x2
+
+e
+
+(cid:7)ψ(x), ψ(x
+
+(cid:3)
+
+(cid:27)
+
+(cid:3)
+)2
+− (x
+2
+
+e
+
+(cid:3)
+
+)n
+
+(x
+
+1√
+(cid:21)
+n!
+
+1√
+n!
+)(cid:8) =
+
+(cid:20)
+
+∞(cid:7)
+
+n=0
+− x2+(x
+= e
+
+2
+
+(cid:21)(cid:26)
+
+2 x n
+
+1√
+n!
+(cid:3)
+
+)2
+
+− x2
+
+(cid:20)
+
+e
+
+∞(cid:7)
+
+)n
+
+(cid:3)
+
+(x x
+n!
+
+n=0
+
+(cid:3)(cid:9)2
+
+−(cid:9)x−x
+
+2
+
+= e
+
+.
+
+Here the feature space is of inﬁnite dimension while evaluating the kernel is very
+simple. More generally, given a scalar σ > 0, the Gaussian kernel is deﬁned to be
+
+(cid:3)
+
+) = e
+
+−(cid:9)x−x(cid:3)(cid:9)2
+
+2 σ
+
+.
+
+K (x,x
+
+Intuitively, the Gaussian kernel sets the inner product in the feature space
+between x,x(cid:3)
+to be close to zero if the instances are far away from each other (in
+the original domain) and close to 1 if they are close. σ is a parameter that controls
+the scale determining what we mean by “close.” It is easy to verify that K imple-
+ments an inner product in a space in which for any n and any monomial of order k
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:51:54, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.017
+
+16.2 The Kernel Trick
+
+185
+
+2
+
+−(cid:9)x(cid:9)2
+
+1√
+n!
+
+there exists an element of ψ(x) that equals
+any polynomial predictor over the original space by using a Gaussian kernel.
+
+n
+i=1 x Ji . Hence, we can learn
+
+e
+
+2
+
+Recall that the VC-dimension of the class of all polynomial predictors is inﬁ-
+nite (see Exercise 16.12). There is no contradiction, because the sample complexity
+required to learn with Gaussian kernels depends on the margin in the feature space,
+which will be large if we are lucky, but can in general be arbitrarily small.
+
+The Gaussian kernel is also called the RBF kernel, for “Radial Basis Functions.”
+
+16.2.1 Kernels as a Way to Express Prior Knowledge
+As we discussed previously, a feature mapping, ψ, may be viewed as expanding the
+class of linear classiﬁers to a richer class (corresponding to linear classiﬁers over
+the feature space). However, as discussed in the book so far, the suitability of any
+hypothesis class to a given learning task depends on the nature of that task. One can
+therefore think of an embedding ψ as a way to express and utilize prior knowledge
+about the problem at hand. For example, if we believe that positive examples can be
+distinguished by some ellipse, we can deﬁne ψ to be all the monomials up to order
+2, or use a degree 2 polynomial kernel.
+
+As a more realistic example, consider the task of learning to ﬁnd a sequence of
+characters (“signature”) in a ﬁle that indicates whether it contains a virus or not.
+Formally, let X be the set of all ﬁnite strings over some alphabet set (cid:5), and let
+Xd be the set of all such strings of length at most d. The hypothesis class that one
+wishes to learn is H = {hv : v ∈ Xd}, where, for a string x ∈ X , hv(x) is 1 iff v is a
+substring of x (and hv(x) = −1 otherwise). Let us show how using an appropriate
+embedding this class can be realized by linear classiﬁers over the resulting feature
+space. Consider a mapping ψ to a space Rs where s = |Xd|, so that each coordinate
+of ψ(x) corresponds to some string v and indicates whether v is a substring of x
+(that is, for every x ∈ X , ψ(x) is a vector in {0,1}|Xd|
+). Note that the dimension of
+this feature space is exponential in d. It is not hard to see that every member of the
+class H can be realized by composing a linear classiﬁer over ψ(x), and, moreover, by
+√
+such a halfspace whose norm is 1 and that attains a margin of 1 (see Exercise 16.1).
+Furthermore, for every x ∈ X , (cid:9)ψ(x)(cid:9) = O(
+d). So, overall, it is learnable using
+SVM with a sample complexity that is polynomial in d. However, the dimension of
+the feature space is exponential in d so a direct implementation of SVM over the
+feature space is problematic. Luckily, it is easy to calculate the inner product in the
+feature space (i.e., the kernel function) without explicitly mapping instances into
+) is simply the number of common substrings of x
+the feature space. Indeed, K (x , x
+and x
+
+, which can be easily calculated in time polynomial in d.
+
+(cid:3)
+
+(cid:3)
+
+This example also demonstrates how feature mapping enables us to use
+
+halfspaces for nonvectorial domains.
+
+16.2.2 Characterizing Kernel Functions*
+As we have discussed in the previous section, we can think of the speciﬁcation of
+the kernel matrix as a way to express prior knowledge. Consider a given similarity
+function of the form K : X × X → R. Is it a valid kernel function? That is, does it
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:51:54, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.017
+
+186
+
+Kernel Methods
+
+"(cid:7)
+
+3
+
+(cid:7)
+
+4 =3
+
+) for some feature mapping ψ?
+
+represent an inner product between ψ(x) and ψ(x(cid:3)
+The following lemma gives a sufﬁcient and necessary condition.
+Lemma 16.2. A symmetric function K : X ×X → R implements an inner product in
+some Hilbert space if and only if it is positive semideﬁnite; namely, for all x1, . . . ,xm,
+the Gram matrix, Gi , j = K (xi ,x j ), is a positive semideﬁnite matrix.
+Proof. It is trivial to see that if K implements an inner product in some Hilbert
+space then the Gram matrix is positive semideﬁnite. For the other direction, deﬁne
+the space of functions over X as RX = { f : X → R}. For each x ∈ X let ψ(x) be
+the function x (cid:29)→ K (·,x). Deﬁne a vector space by taking all linear combinations of
+elements of the form K (·,x). Deﬁne an inner product on this vector space to be
+
+#
+
+(cid:7)
+
+αi K (·,xi ),
+
+β j K (·,x
+
+(cid:3)
+j )
+
+=
+
+αi β j K (xi ,x
+
+(cid:3)
+j ).
+
+i
+
+j
+
+i , j
+
+This is a valid inner product since it is symmetric (because K is symmetric), it is
+linear (immediate), and it is positive deﬁnite (it is easy to see that K (x, x) ≥ 0 with
+equality only for ψ(x) being the zero function). Clearly,
+
+(cid:3)
+
+ψ(x), ψ(x
+
+)
+
+K (·,x), K (·,x)
+
+4 = K (x,x
+
+(cid:3)
+
+),
+
+which concludes our proof.
+
+16.3 IMPLEMENTING SOFT-SVM WITH KERNELS
+Next, we turn to solving Soft-SVM with kernels. While we could have designed
+an algorithm for solving Equation (16.4), there is an even simpler approach that
+directly tackles the Soft-SVM optimization problem in the feature space,
+
+(cid:27)
+
+(cid:26)
+
+min
+w
+
+λ
+2
+
+(cid:9)w(cid:9)2 + 1
+m
+
+max{0,1− y(cid:7)w, ψ(xi )(cid:8)}
+
+,
+
+(16.5)
+
+m(cid:7)
+
+i=1
+
+while only using kernel evaluations. The basic observation is that the vector w(t)
+maintained by the SGD procedure we have described in Section 15.5 is always in
+the linear span of {ψ(x1), . . . , ψ(xm)}. Therefore, rather than maintaining w(t) we
+can maintain the corresponding coefﬁcients α.
+) =
+Formally,
+)(cid:8). We shall maintain two vectors in Rm, corresponding to two vectors
+(cid:7)ψ(x), ψ(x(cid:3)
+θ (t) and w(t) deﬁned in the SGD procedure of Section 15.5. That is, β(t) will be a
+vector such that
+
+let K be the kernel function, namely,
+
+for all x,x(cid:3)
+
+, K (x,x(cid:3)
+
+θ (t) = m(cid:7)
+w(t) = m(cid:7)
+
+j=1
+
+j=1
+
+β(t)
+j
+
+ψ(x j )
+
+α(t)
+j
+
+ψ(x j ).
+
+(16.6)
+
+(16.7)
+
+and α(t) be such that
+
+The vectors β and α are updated according to the following procedure.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:51:54, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.017
+
+SGD for Solving Soft-SVM with Kernels
+
+16.4 Summary
+
+187
+
+λ t
+
+β(t)
+
+Goal: Solve Equation (16.5)
+parameter: T
+Initialize: β(1) = 0
+for t = 1, . . . , T
+Let α(t) = 1
+(cid:2)
+Choose i uniformly at random from [m]
+For all j (cid:18)= i set β(t+1)
+m
+j=1
+If (yi
+Set β(t+1)
+Else
+Set β(t+1)
+
+= β(t)
+α(t)
+j K (x j ,xi ) < 1)
+= β(t)
+
+Output: ¯w =(cid:2)
+
+¯α j ψ(x j ) where ¯α = 1
+
+= β(t)
+i
+m
+j=1
+
++ yi
+
+j
+
+j
+
+i
+
+i
+
+i
+
+T
+
+(cid:2)
+
+T
+t=1
+
+α(t)
+
+The following lemma shows that the preceding implementation is equivalent to
+
+m
+j=1
+
+when applied on the feature space, and let ¯w = (cid:2)
+
+running the SGD procedure described in Section 15.5 on the feature space.
+Lemma 16.3. Let ˆw be the output of the SGD procedure described in Section 15.5,
+¯α j ψ(x j ) be the output of
+applying SGD with kernels. Then ¯w = ˆw.
+Proof. We will show that for every t Equation (16.6) holds, where θ (t) is the result
+of running the SGD procedure described in Section 15.5 in the feature space. By the
+deﬁnition of α(t) = 1
+θ (t), this claim implies that Equation (16.7)
+also holds, and the proof of our lemma will follow. To prove that Equation (16.6)
+holds we use a simple inductive argument. For t = 1 the claim trivially holds. Assume
+it holds for t ≥ 1. Then,
+9
+
+β(t) and w(t) = 1
+
+"(cid:7)
+
+m(cid:7)
+
+#
+
+8
+
+λ t
+
+λ t
+
+yi
+
+w(t), ψ(xi )
+
+= yi
+
+α(t)
+j
+
+ψ(x j ), ψ(xi )
+
+α(t)
+j K (x j ,xi ).
+
+= yi
+
+j=1
+
+Hence, the condition in the two algorithms is equivalent and if we update θ we have
+
+θ (t+1) = θ (t) + yi ψ(xi ) = m(cid:7)
+
+ψ(x j )+ yi ψ(xi ) = m(cid:7)
+
+β(t+1)
+
+j
+
+ψ(x j ),
+
+j=1
+
+j
+
+β(t)
+j
+
+j=1
+
+which concludes our proof.
+
+16.4 SUMMARY
+Mappings from the given domain to some higher dimensional space, on which a
+halfspace predictor is used, can be highly powerful. We beneﬁt from a rich and
+complex hypothesis class, yet need to solve the problems of high sample and compu-
+tational complexities. In Chapter 10, we discussed the AdaBoost algorithm, which
+faces these challenges by using a weak learner: Even though we’re in a very high
+dimensional space, we have an “oracle” that bestows on us a single good coordinate
+to work with on each iteration. In this chapter we introduced a different approach,
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:51:54, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.017
+
+188
+
+Kernel Methods
+
+the kernel trick. The idea is that in order to ﬁnd a halfspace predictor in the high
+dimensional space, we do not need to know the representation of instances in that
+space, but rather the values of inner products between the mapped instances. Cal-
+culating inner products between instances in the high dimensional space without
+using their representation in that space is done using kernel functions. We have also
+shown how the SGD algorithm can be implemented using kernels.
+
+The ideas of feature mapping and the kernel trick allow us to use the framework
+of halfspaces and linear predictors for nonvectorial data. We demonstrated how
+kernels can be used to learn predictors over the domain of strings.
+
+We presented the applicability of the kernel trick in SVM. However, the ker-
+nel trick can be applied in many other algorithms. A few examples are given as
+exercises.
+
+This chapter ends the series of chapters on linear predictors and convex prob-
+lems. The next two chapters deal with completely different types of hypothesis
+classes.
+
+16.5 BIBLIOGRAPHIC REMARKS
+In the context of SVM, the kernel-trick has been introduced in Boser et al. (1992).
+See also Aizerman et al. (1964). The observation that the kernel-trick can be applied
+whenever an algorithm only relies on inner products was ﬁrst stated by Schölkopf
+et al. (1998). The proof of the representer theorem is given in (Schölkopf et al. 2000,
+Schölkopf et al. 2001). The conditions stated in Lemma 16.2 are a simpliﬁcation of
+conditions due to Mercer. Many useful kernel functions have been introduced in
+the literature for various applications. We refer the reader to Schölkopf & Smola
+(2002).
+
+16.6 EXERCISES
+16.1 Consider the task of ﬁnding a sequence of characters in a ﬁle, as described in
+Section 16.2.1. Show that every member of the class H can be realized by composing
+a linear classiﬁer over ψ(x), whose norm is 1 and that attains a margin of 1.
+
+16.2 Kernelized Perceptron: Show how to run the Perceptron algorithm while only
+accessing the instances via the kernel function. Hint: The derivation is similar to
+the derivation of implementing SGD with kernels.
+
+16.3 Kernel Ridge Regression: The ridge regression problem, with a feature mapping
+
+ψ, is the problem of ﬁnding a vector w that minimizes the function
+
+f (w) = λ(cid:9)w(cid:9)2 + 1
+2m
+
+((cid:7)w, ψ(xi)(cid:8)− yi)2,
+
+(16.8)
+
+m(cid:7)
+
+i=1
+
+and then returning the predictor
+
+h(x) = (cid:7)w,x(cid:8).
+
+(cid:2)
+Show how to implement the ridge regression algorithm with kernels.
+Hint: The representer theorem tells us that there exists a vector α ∈ Rm such that
+
+m
+i=1
+
+αi ψ(xi) is a minimizer of Equation (16.8).
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:51:54, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.017
+
+16.6 Exercises
+
+189
+
+m(cid:7)
+
+i=1
+
+1. Let G be the Gram matrix with regard to S and K . That is, Gi j = K (xi ,x j ).
+
+Deﬁne g : Rm → R by
+
+g(α) = λ· αT Gα + 1
+2m
+
+((cid:7)α, G·,i(cid:8)− yi)2,
+
+(16.9)
+
+minimizes Equation (16.9)
+
+∗ =(cid:2)
+
+where G·,i is the i’th column of G. Show that if α∗
+then w
+
+ψ(xi) is a minimizer of f .
+
+α∗
+
+2. Find a closed form expression for α∗
+
+m
+i=1
+
+.
+
+i
+
+16.4 Let N be any positive integer. For every x, x
+
+(cid:3) ∈ {1, . . . , N} deﬁne
+
+K (x, x
+
+(cid:3)
+
+) = min{x, x
+
+(cid:3)}.
+
+Prove that K is a valid kernel; namely, ﬁnd a mapping ψ : {1, . . . , N} → H where H
+is some Hilbert space, such that
+
+∀x, x
+
+(cid:3) ∈ {1, . . . , N}, K (x, x
+
+(cid:3)
+
+) = (cid:7)ψ(x), ψ(x
+
+(cid:3)
+
+)(cid:8).
+
+16.5 A supermarket manager would like to learn which of his customers have babies on
+the basis of their shopping carts. Speciﬁcally, he sampled i.i.d. customers, where
+for customer i, let xi ⊂ {1, . . . , d} denote the subset of items the customer bought,
+and let yi ∈ {±1} be the label indicating whether this customer has a baby. As prior
+knowledge, the manager knows that there are k items such that the label is deter-
+mined to be 1 iff the customer bought at least one of these k items. Of course, the
+identity of these k items is not known (otherwise, there was nothing to learn). In
+addition, according to the store regulation, each customer can buy at most s items.
+Help the manager to design a learning algorithm such that both its time complexity
+and its sample complexity are polynomial in s, k, and 1/(cid:2).
+16.6 Let X be an instance set and let ψ be a feature mapping of X into some Hilbert
+feature space V . Let K : X × X → R be a kernel function that implements inner
+products in the feature space V .
+
+Consider the binary classiﬁcation algorithm that predicts the label of an unseen
+instance according to the class with the closest average. Formally, given a training
+sequence S = (x1, y1), . . . ,(xm, ym), for every y ∈ {±1} we deﬁne
+
+where m y = |{i : yi = y}|. We assume that m+ and m− are nonzero. Then, the
+algorithm outputs the following decision rule:
+
+(cid:7)
+
+i:yi=y
+
+cy = 1
+m y
+
+ψ(xi).
+
+(cid:5)
+
+h(x) =
+
+1 (cid:9)ψ(x)− c+(cid:9) ≤ (cid:9)ψ(x)− c−(cid:9)
+0 otherwise.
+2 ((cid:9)c−(cid:9)2 −(cid:9)c+(cid:9)2). Show that
+h(x) = sign((cid:7)w, ψ(x)(cid:8)+ b).
+
+1. Let w = c+ − c− and let b = 1
+
+2. Show how to express h(x) on the basis of the kernel function, and without
+
+accessing individual entries of ψ(x) or w.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:51:54, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.017
+
+

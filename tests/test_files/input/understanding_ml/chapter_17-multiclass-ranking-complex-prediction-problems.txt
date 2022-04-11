@@ -1,0 +1,1967 @@
+17
+
+Multiclass, Ranking, and Complex
+Prediction Problems
+
+Multiclass categorization is the problem of classifying instances into one of several
+possible target classes. That is, we are aiming at learning a predictor h : X → Y,
+where Y is a ﬁnite set of categories. Applications include, for example, categorizing
+documents according to topic (X is the set of documents and Y is the set of possible
+topics) or determining which object appears in a given image (X is the set of images
+and Y is the set of possible objects).
+
+The centrality of the multiclass learning problem has spurred the development of
+various approaches for tackling the task. Perhaps the most straightforward approach
+is a reduction from multiclass classiﬁcation to binary classiﬁcation. In Section 17.1
+we discuss the most common two reductions as well as the main drawback of the
+reduction approach.
+
+We then turn to describe a family of linear predictors for multiclass problems.
+Relying on the RLM and SGD frameworks from previous chapters, we describe
+several practical algorithms for multiclass prediction.
+In Section 17.3 we show how to use the multiclass machinery for complex pre-
+diction problems in which Y can be extremely large but has some structure on it.
+This task is often called structured output learning. In particular, we demonstrate
+this approach for the task of recognizing handwritten words, in which Y is the set of
+all possible strings of some bounded length (hence, the size of Y is exponential in
+the maximal length of a word).
+
+Finally, in Section 17.4 and Section 17.5 we discuss ranking problems in which
+the learner should order a set of instances according to their “relevance.” A typical
+application is ordering results of a search engine according to their relevance to the
+query. We describe several performance measures that are adequate for assessing
+the performance of ranking predictors and describe how to learn linear predictors
+for ranking problems efﬁciently.
+
+17.1 ONE-VERSUS-ALL AND ALL-PAIRS
+The simplest approach to tackle multiclass prediction problems is by reduc-
+tion to binary classiﬁcation. Recall that in multiclass prediction we would like
+
+190
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:52:55, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.018
+
+191
+
+17.1 One-versus-All and All-Pairs
+to learn a function h : X → Y. Without loss of generality let us denote
+Y = {1, . . . ,k}.
+
+In the One-versus-All method (a.k.a. One-versus-Rest) we train k binary classi-
+ﬁers, each of which discriminates between one class and the rest of the classes. That
+is, given a training set S = (x1, y1), . . . ,(xm , ym), where every yi is in Y, we construct
+k binary training sets, S1, . . . , Sk, where Si = (x1,(− 1)1[y1(cid:18)=i]), . . . ,(xm ,(− 1)1[ym(cid:18)=i]). In
+words, Si is the set of instances labeled 1 if their label in S was i, and −1 otherwise.
+For every i ∈ [k] we train a binary predictor hi : X → {±1} based on Si , hoping that
+hi (x) should equal 1 if and only if x belongs to class i. Then, given h1, . . . ,hk, we
+construct a multiclass predictor using the rule
+
+h(x) ∈ argmax
+i∈[k]
+
+hi (x).
+
+(17.1)
+
+When more than one binary hypothesis predicts “1” we should somehow decide
+which class to predict (e.g., we can arbitrarily decide to break ties by taking the
+minimal index in argmaxi hi (x)). A better approach can be applied whenever each
+hi hides additional information, which can be interpreted as the conﬁdence in the
+prediction y = i. For example, this is the case in halfspaces, where the actual predic-
+tion is sign((cid:7)w, x(cid:8)), but we can interpret (cid:7)w, x(cid:8) as the conﬁdence in the prediction.
+In such cases, we can apply the multiclass rule given in Equation (17.1) on the real
+valued predictions. A pseudocode of the One-versus-All approach is given in the
+following.
+
+One-versus-All
+
+input:
+training set S = (x1, y1), . . . ,(xm , ym)
+algorithm for binary classiﬁcation A
+foreach i ∈ Y
+let Si = (x1, (− 1)1[y1(cid:18)=i]), . . . ,(xm , (− 1)1[ym(cid:18)=i])
+let hi = A(Si )
+output:
+the multiclass hypothesis deﬁned by h(x) ∈ argmaxi∈Y hi (x)
+
+Another popular reduction is the All-Pairs approach, in which all pairs of classes
+are compared to each other. Formally, given a training set S = (x1, y1), . . . ,(xm , ym),
+where every yi is in [k], for every 1 ≤ i < j ≤ k we construct a binary training
+sequence, Si , j , containing all examples from S whose label is either i or j. For each
+such an example, we set the binary label in Si , j to be +1 if the multiclass label in
+S is i and −1 if the multiclass label in S is j. Next, we train a binary classiﬁcation
+algorithm based on every Si , j to get hi , j . Finally, we construct a multiclass classiﬁer
+by predicting the class that had the highest number of “wins.” A pseudocode of the
+All-Pairs approach is given in the following.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:52:55, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.018
+
+192 Multiclass and Ranking
+
+All-Pairs
+
+input:
+training set S = (x1, y1), . . . ,(xm , ym)
+algorithm for binary classiﬁcation A
+foreach i , j ∈ Y s.t. i < j
+initialize Si , j to be the empty sequence
+for t = 1, . . . ,m
+If yt = i add (xt ,1) to Si , j
+If yt = j add (xt ,−1) to Si , j
+let hi , j = A(Si , j )
+output:
+the multiclass hypothesis deﬁned by
+h(x) ∈ argmaxi∈Y
+
+(cid:17)
+j∈Y sign( j − i)hi , j (x)
+
+(cid:16)(cid:2)
+
+Although reduction methods such as the One-versus-All and All-Pairs are sim-
+ple and easy to construct from existing algorithms, their simplicity has a price. The
+binary learner is not aware of the fact that we are going to use its output hypotheses
+for constructing a multiclass predictor, and this might lead to suboptimal results, as
+illustrated in the following example.
+
+Example 17.1. Consider a multiclass categorization problem in which the instance
+space is X = R2 and the label set is Y = {1, 2, 3}. Suppose that instances of the
+different classes are located in nonintersecting balls as depicted in the following.
+
+1
+
+2
+
+3
+
+Suppose that the probability masses of classes 1, 2, 3 are 40%, 20%, and 40%,
+respectively. Consider the application of One-versus-All to this problem, and
+assume that the binary classiﬁcation algorithm used by One-versus-All is ERM with
+respect to the hypothesis class of halfspaces. Observe that for the problem of dis-
+criminating between class 2 and the rest of the classes, the optimal halfspace would
+be the all negative classiﬁer. Therefore, the multiclass predictor constructed by One-
+(cid:17)
+versus-All might err on all the examples from class 2 (this will be the case if the tie in
+the deﬁnition of h(x) is broken by the numerical value of the class label). In contrast,
+if we choose hi (x) = (cid:7)wi ,x(cid:8), where w1 =
+,
+then the classiﬁer deﬁned by h(x) = argmaxi hi (x) perfectly predicts all the exam-
+ples. We see that even though the approximation error of the class of predictors of
+the form h(x) = argmaxi
+(cid:7)wi ,x(cid:8) is zero, the One-versus-All approach might fail to
+ﬁnd a good predictor from this class.
+
+, w2 = (0,1), and w3 =
+
+(cid:16)
+− 1√
+
+, 1√
+2
+
+, 1√
+2
+
+1√
+2
+
+(cid:17)
+
+(cid:16)
+
+2
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:52:55, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.018
+
+17.2 Linear Multiclass Predictors
+
+193
+
+17.2 LINEAR MULTICLASS PREDICTORS
+In light of the inadequacy of reduction methods, in this section we study a more
+direct approach for learning multiclass predictors. We describe the family of linear
+multiclass predictors. To motivate the construction of this family, recall that a linear
+predictor for binary classiﬁcation (i.e., a halfspace) takes the form
+
+h(x) = sign((cid:7)w,x(cid:8)).
+
+An equivalent way to express the prediction is as follows:
+
+h(x) = argmax
+y∈{±1}
+
+(cid:7)w, yx(cid:8),
+
+where yx is the vector obtained by multiplying each element of x by y.
+This representation leads to a natural generalization of halfspaces to multiclass
+problems as follows. Let (cid:22) : X ×Y → Rd be a class-sensitive feature mapping. That
+is, (cid:22) takes as input a pair (x, y) and maps it into a d dimensional feature vector.
+Intuitively, we can think of the elements of (cid:22)(x, y) as score functions that assess
+how well the label y ﬁts the instance x. We will elaborate on (cid:22) later on. Given (cid:22)
+and a vector w ∈ Rd, we can deﬁne a multiclass predictor, h : X → Y, as follows:
+
+h(x) = argmax
+y∈Y
+
+(cid:7)w, (cid:22)(x, y)(cid:8).
+
+That is, the prediction of h for the input x is the label that achieves the highest
+weighted score, where weighting is according to the vector w.
+Let W be some set of vectors in Rd, for example, W = {w ∈ Rd : (cid:9)w(cid:9) ≤ B},
+for some scalar B > 0. Each pair ((cid:22), W ) deﬁnes a hypothesis class of multiclass
+predictors:
+
+H(cid:22),W = {x (cid:29)→ argmax
+y∈Y
+
+(cid:7)w, (cid:22)(x, y)(cid:8) : w ∈ W}.
+
+Of course, the immediate question, which we discuss in the sequel, is how to con-
+struct a good (cid:22). Note that if Y = {±1} and we set (cid:22)(x, y) = yx and W = Rd, then
+H(cid:22),W becomes the hypothesis class of homogeneous halfspace predictors for binary
+classiﬁcation.
+
+17.2.1 How to Construct (cid:22)
+As mentioned before, we can think of the elements of (cid:22)(x, y) as score functions
+that assess how well the label y ﬁts the instance x. Naturally, designing a good (cid:22)
+is similar to the problem of designing a good feature mapping (as we discussed in
+Chapter 16 and as we will discuss in more detail in Chapter 25). Two examples of
+useful constructions are given in the following.
+
+The Multivector Construction:
+Let Y = {1, . . . ,k} and let X = Rn. We deﬁne (cid:22) : X × Y → Rd, where d = nk, as
+follows
+
+: ;< =
+(cid:22)(x, y) = [ 0, . . . ,0
+∈R(y−1)n
+
+:
+
+;<
+
+∈Rn
+
+, x1, . . . , xn
+
+=
+
+: ;< =
+
+, 0, . . . ,0
+∈R(k−y)n
+
+].
+
+(17.2)
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:52:55, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.018
+
+194 Multiclass and Ranking
+
+That is, (cid:22)(x, y) is composed of k vectors, each of which is of dimension n, where
+we set all the vectors to be the all zeros vector except the y’th vector, which is set
+to be x. It follows that we can think of w ∈ Rnk as being composed of k weight
+vectors in Rn, that is, w = [w1; . . . ; wk], hence the name multivector construction.
+By the construction we have that (cid:7)w, (cid:22)(x, y)(cid:8) = (cid:7)wy ,x(cid:8), and therefore the multiclass
+prediction becomes
+
+h(x) = argmax
+y∈Y
+
+(cid:7)wy ,x(cid:8).
+
+A geometric illustration of the multiclass prediction over X = R2 is given in the
+following.
+
+w2
+
+w1
+
+w3
+
+w4
+
+TF-IDF:
+The previous deﬁnition of (cid:22)(x, y) does not incorporate any prior knowledge about
+the problem. We next describe an example of a feature function (cid:22) that does incor-
+porate prior knowledge. Let X be a set of text documents and Y be a set of possible
+topics. Let d be a size of a dictionary of words. For each word in the dictionary,
+whose corresponding index is j, let T F( j ,x) be the number of times the word cor-
+responding to j appears in the document x. This quantity is called Term-Frequency.
+Additionally, let DF( j , y) be the number of times the word corresponding to j
+appears in documents in our training set that are not about topic y. This quantity
+(cid:16)
+is called Document-Frequency and measures whether word j is frequent in other
+topics. Now, deﬁne (cid:22) : X ×Y → Rd to be such that
+
+(cid:17)
+
+(cid:22) j (x, y) = T F( j ,x) log
+
+m
+
+DF( j ,y)
+
+,
+
+where m is the total number of documents in our training set. The preceding quantity
+is called term-frequency-inverse-document-frequency or TF-IDF for short. Intu-
+itively, (cid:22) j (x, y) should be large if the word corresponding to j appears a lot in the
+document x but does not appear at all in documents that are not on topic y. If this
+is the case, we tend to believe that the document x is on topic y. Note that unlike
+the multivector construction described previously, in the current construction the
+dimension of (cid:22) does not depend on the number of topics (i.e., the size of Y).
+
+17.2.2 Cost-Sensitive Classiﬁcation
+So far we used the zero-one loss as our performance measure of the quality of h(x).
+That is, the loss of a hypothesis h on an example (x, y) is 1 if h(x) (cid:18)= y and 0 other-
+wise. In some situations it makes more sense to penalize different levels of loss for
+different mistakes. For example, in object recognition tasks, it is less severe to pre-
+dict that an image of a tiger contains a cat than predicting that the image contains a
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:52:55, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.018
+
+17.2 Linear Multiclass Predictors
+whale. This can be modeled by specifying a loss function, (cid:23) :Y ×Y → R+, where for
+(cid:3), y, the loss of predicting the label y
+when the correct label is
+every pair of labels, y
+(cid:3), y). We assume that (cid:23)(y, y) = 0. Note that the zero-one loss
+y is deﬁned to be (cid:23)(y
+can be easily modeled by setting (cid:23)(y
+
+(cid:3), y) = 1[y(cid:3)(cid:18)=y].
+
+(cid:3)
+
+195
+
+17.2.3 ERM
+We have deﬁned the hypothesis class H(cid:22),W and speciﬁed a loss function (cid:23). To learn
+the class with respect to the loss function, we can apply the ERM rule with respect
+to this class. That is, we search for a multiclass hypothesis h ∈ H(cid:22),W , parameterized
+by a vector w, that minimizes the empirical risk with respect to (cid:23),
+
+m(cid:7)
+
+i=1
+
+L S(h) = 1
+m
+
+(cid:23)(h(xi ), yi ).
+
+We now show that when W = Rd and we are in the realizable case, then it is
+possible to solve the ERM problem efﬁciently using linear programming. Indeed, in
+the realizable case, we need to ﬁnd a vector w ∈ Rd that satisﬁes
+
+∀i ∈ [m],
+
+yi = argmax
+y∈Y
+
+(cid:7)w, (cid:22)(xi , y)(cid:8).
+
+Equivalently, we need that w will satisfy the following set of linear inequalities
+
+∀i ∈ [m], ∀y ∈ Y \{yi}, (cid:7)w, (cid:22)(xi , yi )(cid:8) > (cid:7)w, (cid:22)(xi , y)(cid:8).
+
+Finding w that satisﬁes the preceding set of linear equations amounts to solving a
+linear program.
+
+As in the case of binary classiﬁcation, it is also possible to use a generalization
+
+of the Perceptron algorithm for solving the ERM problem. See Exercise 17.2.
+
+In the nonrealizable case, solving the ERM problem is in general computa-
+tionally hard. We tackle this difﬁculty using the method of convex surrogate loss
+functions (see Section 12.3). In particular, we generalize the hinge loss to multiclass
+problems.
+
+17.2.4 Generalized Hinge Loss
+Recall that in binary classiﬁcation, the hinge loss is deﬁned to be max{0,1− y(cid:7)w,x(cid:8)}.
+We now generalize the hinge loss to multiclass predictors of the form
+
+hw(x) = argmax
+y(cid:3)∈Y
+
+(cid:7)w, (cid:22)(x,y
+
+(cid:3)
+
+)(cid:8).
+
+Recall that a surrogate convex loss should upper bound the original nonconvex loss,
+which in our case is (cid:23)(hw(x), y). To derive an upper bound on (cid:23)(hw(x), y) we ﬁrst
+note that the deﬁnition of hw(x) implies that
+
+(cid:7)w, (cid:22)(x, y)(cid:8) ≤ (cid:7)w, (cid:22)(x,hw(x))(cid:8).
+
+Therefore,
+
+(cid:23)(hw(x), y) ≤ (cid:23)(hw(x), y)+(cid:7)w, (cid:22)(x,hw(x))− (cid:22)(x, y)(cid:8).
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:52:55, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.018
+
+196 Multiclass and Ranking
+
+Since hw(x) ∈ Y we can upper bound the right-hand side of the preceding by
+
+)− (cid:22)(x, y)(cid:8)(cid:4) def= (cid:9)(w,(x, y)).
+
+(cid:3), y)+(cid:7)w, (cid:22)(x, y
+
+(cid:3)
+
+(cid:23)(y
+
+(cid:3)
+
+max
+y(cid:3)∈Y
+
+(17.3)
+
+We use the term “generalized hinge loss” to denote the preceding expression. As we
+have shown, (cid:9)(w,(x, y)) ≥ (cid:23)(hw(x), y). Furthermore, equality holds whenever the
+, by at least
+score of the correct label is larger than the score of any other label, y
+(cid:23)(y
+
+(cid:3)
+
+(cid:3) ∈ Y \{y},
+
+(cid:7)w, (cid:22)(x,y)(cid:8) ≥ (cid:7)w, (cid:22)(x,y
+
+(cid:3)
+
+)(cid:8)+ (cid:23)(y
+
+(cid:3), y).
+
+(cid:3), y), namely,
+∀y
+
+It is also immediate to see that (cid:9)(w,(x, y)) is a convex function with respect to w
+since it is a maximum over linear functions of w (see Claim 12.5 in Chapter 12), and
+that (cid:9)(w,(x, y)) is ρ-Lipschitz with ρ = maxy(cid:3)∈Y (cid:9)(cid:22)(x, y
+Remark 17.2. We use the name “generalized hinge loss” since in the binary case,
+when Y = {±1}, if we set (cid:22)(x, y) = yx
+2 , then the generalized hinge loss becomes the
+vanilla hinge loss for binary classiﬁcation,
+
+)− (cid:22)(x, y)(cid:9).
+
+(cid:3)
+
+(cid:9)(w,(x, y)) = max{0,1− y(cid:7)w,x(cid:8)}.
+
+Geometric Intuition:
+The feature function (cid:22) :X ×Y → Rd maps each x into |Y| vectors in Rd. The value of
+(cid:9)(w,(x, y)) will be zero if there exists a direction w such that when projecting the |Y|
+vectors onto this direction we obtain that each vector is represented by the scalar
+(cid:7)w, (cid:22)(x, y)(cid:8), and we can rank the different points on the basis of these scalars so
+that
+4
+(cid:2) The point corresponding to the correct y is top-ranked
+3
+(cid:2) For each y
+(cid:3)
+
+(cid:3) (cid:18)= y, the difference between
+4
+
+instead of y. The difference
+
+than the loss of predicting y
+w, (cid:22)(x, y
+
+is also referred to as the “margin” (see Section 15.1).
+
+4 −
+
+w, (cid:22)(x, y)
+
+w, (cid:22)(x, y)
+
+w, (cid:22)(x, y
+
+is larger
+
+and
+
+3
+
+3
+
+4
+
+3
+
+)
+
+)
+
+(cid:3)
+
+(cid:3)
+
+This is illustrated in the following ﬁgure:
+
+Ψ(x, y)
+Δ (y, y")
+
+≥ 
+
+Ψ(x, y")
+
+w
+
+≥ Δ
+(y, y')
+Ψ(x, y')
+
+17.2.5 Multiclass SVM and SGD
+Once we have deﬁned the generalized hinge loss, we obtain a convex-Lipschitz
+learning problem and we can apply our general techniques for solving such
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:52:55, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.018
+
+problems. In particular, the RLM technique we have studied in Chapter 13 yields
+the multiclass SVM rule:
+
+17.2 Linear Multiclass Predictors
+
+197
+
+Multiclass SVM
+
+input: (x1, y1), . . . ,(xm , ym)
+parameters:
+regularization parameter λ > 0
+loss function (cid:23) : Y ×Y → R+
+class-sensitive feature mapping (cid:22) : X ×Y → Rd
+(cid:26)
+(cid:3)
+solve:
+
+m(cid:7)
+
+λ(cid:9)w(cid:9)2 + 1
+m
+
+min
+w∈Rd
+output the predictor hw(x) = argmaxy∈Y(cid:7)w, (cid:22)(x, y)(cid:8)
+
+max
+y(cid:3)∈Y
+
+(cid:23)(y
+
+i=1
+
+(cid:3), yi )+(cid:7)w, (cid:22)(xi , y
+
+(cid:3)
+
+)− (cid:22)(xi , yi )(cid:8)(cid:4)(cid:27)
+
+We can solve the optimization problem associated with multiclass SVM
+using generic convex optimization algorithms (or using the method described in
+Section 15.5). Let us analyze the risk of the resulting hypothesis. The analysis
+seamlessly follows from our general analysis for convex-Lipschitz problems given
+in Chapter 13. In particular, applying Corollary 13.8 and using the fact that the gen-
+eralized hinge loss upper bounds the (cid:23) loss, we immediately obtain an analog of
+Corollary 15.7:
+
+Corollary 17.1. Let D be a distribution over X ×Y, let (cid:22) : X ×Y → Rd, and assume
+that for all x ∈ X and y ∈ Y we have (cid:9)(cid:22)(x, y)(cid:9) ≤ ρ/2. Let B > 0. Consider running
+Multiclass SVM with λ =
+B2m on a training set S ∼ Dm and let hw be the output of
+Multiclass SVM. Then,
+
+(cid:31)
+
+2ρ2
+
++
+
+[L (cid:23)D(hw)] ≤ E
+S∼Dm
+
+E
+S∼Dm
+
+[Lg−hinge
+D
+
+(w)] ≤ min
+u:(cid:9)u(cid:9)≤B
+
+Lg−hinge
+D
+
+(u)+
+
+8ρ2 B2
+
+m
+
+,
+
+where L (cid:23)D(h) = E(x,y)∼D [(cid:23)(h(x), y)] and Lg−hinge
+being the generalized hinge-loss as deﬁned in Equation (17.3).
+
+D
+
+(w) = E(x,y)∼D [(cid:9)(w,(x, y))] with (cid:9)
+
+We can also apply the SGD learning framework for minimizing Lg−hinge
+
+(w)
+as described in Chapter 14. Recall Claim 14.6, which dealt with subgradients
+of max functions. In light of this claim,
+in order to ﬁnd a subgradient of the
+generalized hinge loss all we need to do is to ﬁnd y ∈ Y that achieves the max-
+imum in the deﬁnition of the generalized hinge loss. This yields the following
+
+D
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:52:55, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.018
+
+198 Multiclass and Ranking
+
+algorithm:
+
+SGD for Multiclass Learning
+
+parameters:
+Scalar η > 0, integer T > 0
+loss function (cid:23) : Y ×Y → R+
+class-sensitive feature mapping (cid:22) : X ×Y → Rd
+initialize: w(1) = 0 ∈ Rd
+for t = 1, 2, . . . , T
+sample (x, y) ∼ D
+ﬁnd ˆy ∈ argmaxy(cid:3)∈Y ((cid:23)(y
+set vt = (cid:22)(x, ˆy)− (cid:22)(x, y)
+(cid:2)
+update w(t+1) = w(t) − ηvt
+output ¯w = 1
+
+(cid:3), y)+(cid:7)w(t), (cid:22)(x, y
+
+(cid:3)
+
+T
+t=1 w(t)
+
+T
+
+)− (cid:22)(x, y)(cid:8))
+
+Our general analysis of SGD given in Corollary 14.12 immediately implies:
+
+Corollary 17.2. Let D be a distribution over X ×Y, let (cid:22) : X ×Y → Rd, and assume
+that for all x ∈ X and y ∈ Y we have (cid:9)(cid:22)(x, y)(cid:9) ≤ ρ/2. Let B > 0. Then, for every
+(cid:2) > 0, if we run SGD for multiclass learning with a number of iterations (i.e., number
+of examples)
+
+(cid:31)
+
+and with η =
+
+T ≥ B2ρ2
+(cid:2)2
+
+B2
+ρ2 T , then the output of SGD satisﬁes
+[L (cid:23)D(h ¯w)] ≤ E
+S∼Dm
+
+[Lg−hinge
+D
+
+( ¯w)] ≤ min
+u:(cid:9)u(cid:9)≤B
+
+E
+S∼Dm
+
+Lg−hinge
+D
+
+(u)+ (cid:2).
+
+Remark 17.3. It is interesting to note that the risk bounds given in Corollary 17.1 and
+Corollary 17.2 do not depend explicitly on the size of the label set Y, a fact we will
+rely on in the next section. However, the bounds may depend implicitly on the size
+of Y via the norm of (cid:22)(x, y) and the fact that the bounds are meaningful only when
+there exists some vector u, (cid:9)u(cid:9) ≤ B, for which Lg−hinge
+(u) is not excessively large.
+
+D
+
+17.3 STRUCTURED OUTPUT PREDICTION
+Structured output prediction problems are multiclass problems in which Y is very
+large but is endowed with a predeﬁned structure. The structure plays a key role in
+constructing efﬁcient algorithms. To motivate structured learning problems, con-
+sider the problem of optical character recognition (OCR). Suppose we receive an
+image of some handwritten word and would like to predict which word is written in
+the image. To simplify the setting, suppose we know how to segment the image into
+a sequence of images, each of which contains a patch of the image corresponding
+to a single letter. Therefore, X is the set of sequences of images and Y is the set
+of sequences of letters. Note that the size of Y grows exponentially with the max-
+imal length of a word. An example of an image x corresponding to the label y =
+“workable” is given in the following.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:52:55, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.018
+
+17.3 Structured Output Prediction
+
+199
+
+To tackle structure prediction we can rely on the family of linear predictors
+described in the previous section. In particular, we need to deﬁne a reasonable loss
+function for the problem, (cid:23), as well as a good class-sensitive feature mapping, (cid:22).
+By “good” we mean a feature mapping that will lead to a low approximation error
+for the class of linear predictors with respect to (cid:22) and (cid:23). Once we do this, we can
+rely, for example, on the SGD learning algorithm deﬁned in the previous section.
+
+However, the huge size of Y poses several challenges:
+
+1. To apply the multiclass prediction we need to solve a maximization problem
+
+over Y. How can we predict efﬁciently when Y is so large?
+need to solve a maximization problem over Y.
+
+2. How do we train w efﬁciently? In particular, to apply the SGD rule we again
+
+3. How can we avoid overﬁtting?
+
+In the previous section we have already shown that the sample complexity of
+learning a linear multiclass predictor does not depend explicitly on the number of
+classes. We just need to make sure that the norm of the range of (cid:22) is not too large.
+This will take care of the overﬁtting problem. To tackle the computational chal-
+lenges we rely on the structure of the problem, and deﬁne the functions (cid:22) and (cid:23) so
+that calculating the maximization problems in the deﬁnition of hw and in the SGD
+algorithm can be performed efﬁciently. In the following we demonstrate one way to
+achieve these goals for the OCR task mentioned previously.
+To simplify the presentation, let us assume that all the words in Y are of length
+r and that the number of different letters in our alphabet is q. Let y and y(cid:3)
+be two
+words (i.e., sequences of letters) in Y. We deﬁne the function (cid:23)(y(cid:3),y) to be the
+average number of letters that are different in y
+Next, let us deﬁne a class-sensitive feature mapping (cid:22)(x,y). It will be convenient
+to think about x as a matrix of size n × r, where n is the number of pixels in each
+image, and r is the number of images in the sequence. The j’th column of x corre-
+sponds to the j’th image in the sequence (encoded as a vector of gray level values
+of pixels). The dimension of the range of (cid:22) is set to be d = n q + q2.
+
+and y, namely, 1
+r
+
+1[yi(cid:18)=y
+
+(cid:2)
+
+r
+i=1
+
+(cid:3)
+i ].
+
+(cid:3)
+
+The ﬁrst nq feature functions are “type 1” features and take the form:
+
+(cid:22)i , j ,1(x,y) = 1
+r
+
+xi ,t 1[yt= j].
+
+r(cid:7)
+
+t=1
+
+That is, we sum the value of the i’th pixel only over the images for which y assigns
+the letter j. The triple index (i , j , 1) indicates that we are dealing with feature (i , j)
+of type 1. Intuitively, such features can capture pixels in the image whose gray level
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:52:55, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.018
+
+200 Multiclass and Ranking
+
+values are indicative of a certain letter. The second type of features take the form
+
+(cid:22)i , j ,2(x,y) = 1
+r
+
+1[yt=i] 1[yt−1= j].
+
+r(cid:7)
+
+t=2
+
+That is, we sum the number of times the letter i follows the letter j. Intuitively,
+these features can capture rules like “It is likely to see the pair ‘qu’ in a word” or “It
+is unlikely to see the pair ‘rz’ in a word.” Of course, some of these features will not
+be very useful, so the goal of the learning process is to assign weights to features by
+learning the vector w, so that the weighted score will give us a good prediction via
+
+hw(x) = argmax
+y∈Y
+
+(cid:7)w, (cid:22)(x,y)(cid:8).
+
+It is left to show how to solve the optimization problem in the deﬁnition of hw(x)
+efﬁciently, as well as how to solve the optimization problem in the deﬁnition of ˆy in
+the SGD algorithm. We can do this by applying a dynamic programming procedure.
+We describe the procedure for solving the maximization in the deﬁnition of hw and
+leave as an exercise the maximization problem in the deﬁnition of ˆy in the SGD
+algorithm.
+
+To derive the dynamic programming procedure, let us ﬁrst observe that we can
+
+write
+
+(cid:22)(x,y) = r(cid:7)
+
+t=1
+
+φ(x, yt , yt−1),
+
+for an appropriate φ : X × [q]× [q]∪{0}→ Rd, and for simplicity we assume that y0
+is always equal to 0. Indeed, each feature function (cid:22)i , j ,1 can be written in terms of
+
+φi , j ,1(x, yt , yt−1) = xi ,t 1[yt= j],
+while the feature function (cid:22)i , j ,2 can be written in terms of
+φi , j ,2(x, yt , yt−1) = 1[yt=i] 1[yt−1= j].
+
+Therefore, the prediction can be written as
+
+r(cid:7)
+
+t=1
+
+τ(cid:7)
+
+t=1
+
+hw(x) = argmax
+y∈Y
+
+(cid:7)w, φ(x, yt , yt−1)(cid:8).
+
+(17.4)
+
+In the following we derive a dynamic programming procedure that solves every
+problem of the form given in Equation (17.4). The procedure will maintain a matrix
+M ∈ Rq,r such that
+
+Ms,τ =
+
+max
+
+(y1,...,yτ ):yτ=s
+
+(cid:7)w, φ(x, yt , yt−1)(cid:8).
+
+Clearly, the maximum of (cid:7)w, (cid:22)(x,y)(cid:8) equals maxs Ms,r . Furthermore, we can
+calculate M in a recursive manner:
+Ms,τ = max
+s(cid:3)
+
+Ms(cid:3),τ−1 +3
+
+w, φ(x,s,s
+
+4(cid:4)
+
+(17.5)
+
+(cid:3)
+
+)
+
+.
+
+(cid:3)
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:52:55, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.018
+
+This yields the following procedure:
+
+17.4 Ranking
+
+201
+
+Dynamic Programming for Calculating hw(x) as Given in
+
+Equation (17.4)
+input: a matrix x ∈ Rn,r and a vector w
+initialize:
+foreach s ∈ [q]
+Ms,1 = (cid:7)w, φ(x,s,−1)(cid:8)
+for τ = 2, . . . ,r
+foreach s ∈ [q]
+set Ms,τ as in Equation (17.5)
+set Is,τ to be the s
+set yt = argmaxs Ms,r
+for τ = r , r − 1, . . . ,2
+set yτ−1 = Iyτ ,τ
+output: y = (y1, . . . , yr )
+
+(cid:3)
+
+that maximizes Equation (17.5)
+
+Formally, let X ∗ =(cid:28)∞
+
+17.4 RANKING
+Ranking is the problem of ordering a set of instances according to their “rele-
+vance.” A typical application is ordering results of a search engine according to their
+relevance to the query. Another example is a system that monitors electronic trans-
+actions and should alert for possible fraudulent transactions. Such a system should
+order transactions according to how suspicious they are.
+X n be the set of all sequences of instances from X of
+n=1
+arbitrary length. A ranking hypothesis, h, is a function that receives a sequence of
+instances ¯x = (x1, . . . ,xr ) ∈ X ∗
+, and returns a permutation of [r]. It is more conve-
+nient to let the output of h be a vector y ∈ Rr , where by sorting the elements of y
+we obtain the permutation over [r]. We denote by π(y) the permutation over [r]
+induced by y. For example, for r = 5, the vector y = (2, 1, 6,−1, 0.5) induces the
+permutation π(y) = (4, 3, 5, 1, 2). That is, if we sort y in an ascending order, then
+we obtain the vector (−1, 0.5, 1, 2, 6). Now, π(y)i is the position of yi in the sorted
+vector ( − 1, 0.5, 1, 2, 6). This notation reﬂects that the top-ranked instances are
+(cid:28)∞
+those that achieve the highest values in π(y).
+In the notation of our PAC learning model, the examples domain is Z =
+r=1 (X r × Rr ), and the hypothesis class, H, is some set of ranking hypotheses. We
+next turn to describe loss functions for ranking. There are many possible ways to
+deﬁne such loss functions, and here we list a few examples. In all the examples we
+deﬁne (cid:9)(h,(¯x,y)) = (cid:23)(h(¯x),y), for some function (cid:23) :
+(cid:2) 0–1 Ranking loss: (cid:23)(y(cid:3),y) is zero if y and y(cid:3)
+
+(cid:28)∞
+r=1 (Rr × Rr ) → R+.
+
+induce exactly the same ranking
+and (cid:23)(y(cid:3),y) = 1 otherwise. That is, (cid:23)(y(cid:3),y) = 1[π(y(cid:3))(cid:18)=π(y)]. Such a loss function is
+almost never used in practice as it does not distinguish between the case in which
+π(y(cid:3)
+) is completely different
+from π(y).
+
+) is almost equal to π(y) and the case in which π(y(cid:3)
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:52:55, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.018
+
+202 Multiclass and Ranking
+
+(cid:2) Kendall-Tau Loss: We count the number of pairs (i , j) that are in different order
+
+in the two permutations. This can be written as
+
+(cid:3),y) =
+
+(cid:23)(y
+
+2
+
+r(r − 1)
+
+(cid:3)
+1[sign(y
+i
+
+−y
+
+(cid:3)
+j )(cid:18)=sign(yi−y j )].
+
+r−1(cid:7)
+
+r(cid:7)
+
+i=1
+
+j=i+1
+
+This loss function is more useful than the 0–1 loss as it reﬂects the level of
+similarity between the two rankings.
+(cid:2) Normalized Discounted Cumulative Gain (NDCG): This measure emphasizes
+the correctness at the top of the list by using a monotonically nondecreasing
+discount function D : N → R+. We ﬁrst deﬁne a discounted cumulative gain
+measure:
+
+(cid:3),y) = r(cid:7)
+
+i=1
+
+G(y
+
+D(π(y
+
+(cid:3)
+
+)i ) yi.
+
+In words, if we interpret yi as a score of the “true relevance” of item i, then
+we take a weighted sum of the relevance of the elements, while the weight of
+yi is determined on the basis of the position of i in π(y
+). Assuming that all
+elements of y are nonnegative, it is easy to verify that 0 ≤ G(y(cid:3),y) ≤ G(y, y).
+We can therefore deﬁne a normalized discounted cumulative gain by the ratio
+G(y(cid:3), y)/G(y, y), and the corresponding loss function would be
+D(π(y)i )− D(π(y
+
+(cid:3),y) = 1− G(y
+
+r(cid:7)
+
+(cid:23)(y
+
+(cid:3)
+
+(cid:4)
+
+=
+
+)i )
+
+yi.
+
+1
+
+(cid:3)
+
+(cid:3)
+
+(cid:3),y)
+G(y,y)
+
+G(y,y)
+
+i=1
+
+(cid:3),y) ∈ [0,1] and that (cid:23)(y
+
+(cid:3),y) = 0 whenever
+
+We can easily see that (cid:23)(y
+π(y(cid:3)
+
+) = π(y).
+A typical way to deﬁne the discount function is by
+
+(cid:5)
+
+D(i) =
+
+1
+
+log2 (r−i+2)
+0
+
+if i ∈ {r − k + 1, . . . ,r}
+otherwise
+
+where k < r is a parameter. This means that we care more about elements that
+are ranked higher, and we completely ignore elements that are not at the top-k
+ranked elements. The NDCG measure is often used to evaluate the performance
+of search engines since in such applications it makes sense completely to ignore
+elements that are not at the top of the ranking.
+
+Once we have a hypothesis class and a ranking loss function, we can learn a
+ranking function using the ERM rule. However, from the computational point of
+view, the resulting optimization problem might be hard to solve. We next discuss
+how to learn linear predictors for ranking.
+
+17.4.1 Linear Predictors for Ranking
+A natural way to deﬁne a ranking function is by projecting the instances onto some
+vector w and then outputting the resulting scalars as our representation of the rank-
+ing function. That is, assuming that X ⊂ Rd, for every w ∈ Rd we deﬁne a ranking
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:52:55, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.018
+
+function
+
+hw((x1, . . . ,xr )) = ((cid:7)w,x1(cid:8), . . . ,(cid:7)w,xr(cid:8)).
+
+(17.6)
+
+17.4 Ranking
+
+203
+
+As we discussed in Chapter 16, we can also apply a feature mapping that maps
+instances into some feature space and then takes the inner products with w in the
+feature space. For simplicity, we focus on the simpler form as in Equation (17.6).
+Given some W ⊂ Rd, we can now deﬁne the hypothesis class HW = {hw : w ∈ W}.
+Once we have deﬁned this hypothesis class, and have chosen a ranking loss function,
+we can apply the ERM rule as follows: Given a training set, S = (¯x1,y1), . . . ,(¯xm ,ym),
+where each (¯xi ,yi ) is in (X × R)ri , for some ri ∈ N, we should search w ∈ W that
+(cid:23)(hw(¯xi),yi ). As in the case of binary classiﬁca-
+minimizes the empirical loss,
+tion, for many loss functions this problem is computationally hard, and we therefore
+turn to describe convex surrogate loss functions. We describe the surrogates for the
+Kendall tau loss and for the NDCG loss.
+
+(cid:2)
+
+m
+i=1
+
+A Hinge Loss for the Kendall Tau Loss Function:
+We can think of the Kendall tau loss as an average of 0−1 losses for each pair. In
+particular, for every (i , j) we can rewrite
+
+− y
+In our case, y
+bound as follows:
+
+(cid:3)
+i
+
+(cid:3)
+j
+
+(cid:3)
+
+−y
+
+j )(cid:18)=sign(yi−y j )] = 1[sign(yi−y j )(y
+
+(cid:3)
+1[sign(y
+i
+= (cid:7)w,xi − x j(cid:8). It follows that we can use the hinge loss upper
+
+(cid:3)
+j )≤0].
+
+−y
+
+(cid:3)
+i
+
+1[sign(yi−y j )(y
+
+(cid:3)
+i
+
+−y
+
+(cid:3)
+
+j )≤0] ≤ max
+
+>
+0,1− sign
+
+(cid:3)
+
+(cid:4)3
+w,xi − x j
+
+4?
+
+.
+
+yi − y j
+
+Taking the average over the pairs we obtain the following surrogate convex loss for
+the Kendall tau loss function:
+
+(cid:23)(hw(¯x),y) ≤
+
+2
+
+r(r − 1)
+
+r−1(cid:7)
+
+r(cid:7)
+
+max
+
+i=1
+
+j=i+1
+
+>
+0,1− sign(yi − y j )
+
+3
+
+w,xi − x j
+
+4?
+
+.
+
+The right-hand side is convex with respect to w and upper bounds the Kendall tau
+loss. It is also a ρ-Lipschitz function with parameter ρ ≤ maxi , j (cid:9)xi − x j(cid:9).
+
+A Hinge Loss for the NDCG Loss Function:
+The NDCG loss function depends on the predicted ranking vector y(cid:3) ∈ Rr via the
+permutation it induces. To derive a surrogate loss function we ﬁrst make the fol-
+lowing observation. Let V be the set of all permutations of [r] encoded as vectors;
+namely, each v ∈ V is a vector in [r]r such that for all i (cid:18)= j we have vi (cid:18)= v j . Then
+(see Exercise 17.4),
+
+(cid:3)
+
+π(y
+
+) = argmax
+
+v∈V
+
+(cid:3)
+i.
+
+vi y
+
+(17.7)
+
+r(cid:7)
+
+i=1
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:52:55, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.018
+
+204 Multiclass and Ranking
+
+Let us denote (cid:22)(¯x,v) =(cid:2)
+
+r
+i=1
+
+vixi; it follows that
+
+π(hw(¯x)) = argmax
+v∈V
+
+r(cid:7)
+"
+
+i=1
+
+vi(cid:7)w,xi(cid:8)
+r(cid:7)
+
+#
+
+= argmax
+= argmax
+
+v∈V
+
+v∈V
+
+vixi
+w,
+(cid:7)w, (cid:22)(¯x,v)(cid:8).
+
+i=1
+
+On the basis of this observation, we can use the generalized hinge loss for cost-
+sensitive multiclass classiﬁcation as a surrogate loss function for the NDCG loss as
+follows:
+
+(cid:23)(hw(¯x),y) ≤ (cid:23)(hw(¯x),y)+(cid:7)w, (cid:22)(¯x, π(hw(¯x)))(cid:8)−(cid:7)w, (cid:22)(¯x, π(y))(cid:8)
+
+(cid:23)(v,y)+3
+(cid:29)
+(cid:13)
+(cid:23)(v,y)+ r(cid:7)
+
+4−3
+
+4(cid:30)
+w, (cid:22)(¯x, π(y))
+
+w, (cid:22)(¯x,v)
+
+(cid:15)
+(vi − π(y)i)(cid:7)w,xi(cid:8)
+
+≤ max
+v∈V
+= max
+v∈V
+
+i=1
+
+.
+
+(17.8)
+
+The right-hand side is a convex function with respect to w.
+
+We can now solve the learning problem using SGD as described in
+Section 17.2.5. The main computational bottleneck is calculating a subgradient of
+the loss function, which is equivalent to ﬁnding v that achieves the maximum in
+Equation (17.8) (see Claim 14.6). Using the deﬁnition of the NDCG loss, this is
+equivalent to solving the problem
+
+r(cid:7)
+
+argmin
+
+v∈V
+
+i=1
+
+(αi vi + βi D(vi )),
+
+where αi = −(cid:7)w,xi(cid:8) and βi = yi /G(y,y). We can think of this problem a little bit
+differently by deﬁning a matrix A ∈ Rr,r where
+
+Ai , j = j αi + D( j) βi .
+
+Now, let us think about each j as a “worker,” each i as a “task,” and Ai , j as the cost
+of assigning task i to worker j. With this view, the problem of ﬁnding v becomes
+the problem of ﬁnding an assignment of the tasks to workers of minimal cost. This
+problem is called “the assignment problem” and can be solved efﬁciently. One par-
+ticular algorithm is the “Hungarian method” (Kuhn 1955). Another way to solve
+the assignment problem is using linear programming. To do so, let us ﬁrst write the
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:52:55, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.018
+
+assignment problem as
+
+17.4 Ranking
+
+205
+
+(17.9)
+
+Bi , j = 1
+
+r(cid:7)
+
+Ai , j Bi , j
+
+i , j=1
+
+argmin
+B∈Rr,r+
+s.t. ∀i ∈ [r],
+
+r(cid:7)
+r(cid:7)
+
+j=1
+
+Bi , j = 1
+
+∀ j ∈ [r],
+∀i , j , Bi , j ∈ {0,1}
+
+i=1
+
+A matrix B that satisﬁes the constraints in the preceding optimization problem is
+called a permutation matrix. This is because the constraints guarantee that there is
+at most a single entry of each row that equals 1 and a single entry of each column
+that equals 1. Therefore, the matrix B corresponds to the permutation v ∈ V deﬁned
+by vi = j for the single index j that satisﬁes Bi , j = 1.
+The preceding optimization is still not a linear program because of the combina-
+torial constraint Bi , j ∈ {0,1}. However, as it turns out, this constraint is redundant –
+if we solve the optimization problem while simply omitting the combinatorial
+constraint, then we are still guaranteed that there is an optimal solution that will
+satisfy this constraint. This is formalized later.
+ing (cid:7)A, B(cid:8) such that B is a permutation matrix.
+
+i , j Ai , j Bi , j . Then, Equation (17.9) is the problem of minimiz-
+A matrix B ∈ Rr,r is called doubly stochastic if all elements of B are nonnegative,
+the sum of each row of B is 1, and the sum of each column of B is 1. Therefore,
+solving Equation (17.9) without the constraints Bi , j ∈ {0,1} is the problem
+
+Denote (cid:7)A, B(cid:8) =(cid:2)
+
+(cid:7)A, B(cid:8) s.t. B is a doubly stochastic matrix.
+
+(17.10)
+
+argmin
+B∈Rr,r
+
+The following claim states that every doubly stochastic matrix is a convex
+
+combination of permutation matrices.
+
+Claim 17.3 (Birkhoff 1946, Von Neumann 1953). The set of doubly stochastic
+matrices in Rr,r is the convex hull of the set of permutation matrices in Rr,r .
+
+On the basis of the claim, we easily obtain the following:
+
+Lemma 17.4. There exists an optimal solution of Equation (17.10) that is also an
+optimal solution of Equation (17.9).
+
+i
+
+γiCi , where each Ci is a permutation matrix, each γi > 0, and
+
+Proof. Let B be a solution of Equation (17.10). Then, by Claim 17.3, we can write
+γi = 1.
+Since all the Ci are also doubly stochastic, we clearly have that (cid:7)A, B(cid:8) ≤ (cid:7)A, Ci(cid:8) for
+every i. We claim that there is some i for which (cid:7)A, B(cid:8) = (cid:7)A, Ci(cid:8). This must be true
+since otherwise, if for every i (cid:7)A, B(cid:8) < (cid:7)A, Ci(cid:8), we would have that
+
+i
+
+"
+
+(cid:7)
+
+#
+
+(cid:7)
+
+(cid:7)A, B(cid:8) =
+
+A,
+
+γiCi
+
+=
+
+γi(cid:7)A,Ci(cid:8) >
+
+γi(cid:7)A, B(cid:8) = (cid:7)A, B(cid:8),
+
+(cid:7)
+
+B =(cid:2)
+
+(cid:2)
+
+i
+
+i
+
+i
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:52:55, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.018
+
+206 Multiclass and Ranking
+
+which cannot hold. We have thus shown that some permutation matrix, Ci , sat-
+isﬁes (cid:7)A, B(cid:8) = (cid:7)A,Ci(cid:8). But, since for every other permutation matrix C we have
+(cid:7)A, B(cid:8) ≤ (cid:7)A,C(cid:8) we conclude that Ci is an optimal solution of both Equation (17.9)
+and Equation (17.10).
+
+17.5 BIPARTITE RANKING AND MULTIVARIATE
+PERFORMANCE MEASURES
+
+In the previous section we described the problem of ranking. We used a vector
+y ∈ Rr for representing an order over the elements x1, . . . ,xr . If all elements in y
+are different from each other, then y speciﬁes a full order over [r]. However, if two
+elements of y attain the same value, yi = y j for i (cid:18)= j, then y can only specify a partial
+order over [r]. In such a case, we say that xi and x j are of equal relevance according
+to y. In the extreme case, y ∈ {±1}r, which means that each xi is either relevant
+or nonrelevant. This setting is often called “bipartite ranking.” For example, in the
+fraud detection application mentioned in the previous section, each transaction is
+labeled as either fraudulent (yi = 1) or benign (yi = −1).
+
+Seemingly, we can solve the bipartite ranking problem by learning a binary clas-
+siﬁer, applying it on each instance, and putting the positive ones at the top of the
+ranked list. However, this may lead to poor results as the goal of a binary learner
+is usually to minimize the zero-one loss (or some surrogate of it), while the goal of
+a ranker might be signiﬁcantly different. To illustrate this, consider again the prob-
+lem of fraud detection. Usually, most of the transactions are benign (say 99.9%).
+Therefore, a binary classiﬁer that predicts “benign” on all transactions will have a
+zero-one error of 0.1%. While this is a very small number, the resulting predictor is
+meaningless for the fraud detection application. The crux of the problem stems from
+the inadequacy of the zero-one loss for what we are really interested in. A more ade-
+quate performance measure should take into account the predictions over the entire
+set of instances. For example, in the previous section we have deﬁned the NDCG
+loss, which emphasizes the correctness of the top-ranked items. In this section we
+describe additional loss functions that are speciﬁcally adequate for bipartite ranking
+problems.
+As in the previous section, we are given a sequence of instances, ¯x = (x1, . . . ,xr ),
+and we predict a ranking vector y(cid:3) ∈ Rr . The feedback vector is y ∈ {±1}r. We deﬁne
+and y and depends on a threshold θ ∈ R. This threshold
+a loss that depends on y(cid:3)
+transforms the vector y(cid:3) ∈ Rr into the vector (sign(y
+− θ)) ∈ {±1}r.
+Usually, the value of θ is set to be 0. However, as we will see, we sometimes set θ
+while taking into account additional constraints on the problem.
+
+− θ), . . . ,sign(y
+
+(cid:3)
+r
+
+(cid:3)
+i
+
+The loss functions we deﬁne in the following depend on the following 4 numbers:
+
+True positives: a = |{i : yi = +1∧ sign(y
+False positives: b = |{i : yi = −1∧ sign(y
+False negatives: c = |{i : yi = +1∧ sign(y
+True negatives: d = |{i : yi = −1∧ sign(y
+
+(cid:3)
+i
+(cid:3)
+i
+(cid:3)
+i
+(cid:3)
+i
+
+− θ) = +1}|
+− θ) = +1}|
+− θ) = −1}|
+− θ) = −1}|
+
+(17.11)
+
+y(cid:3)
+
+The recall (a.k.a. sensitivity) of a prediction vector is the fraction of true positives
+a
+a+c . The precision is the fraction of correct predictions among
+“catches,” namely,
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:52:55, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.018
+
+17.5 Bipartite Ranking and Multivariate Performance Measures
+
+207
+
+1
+
+.
+
+2
+
+Recall
+
+(cid:17)
+
+(cid:16)
+
+(cid:17)
+
+(cid:16)
+
+a
+a+c
+
+a
+a+c
+
+d
+d+b .
+
+2
++ 1
+
++ d
+d+b
+
++ d
+d+b
+
+a
+a+b . The speciﬁcity is the fraction of true
+the positive labels we predict, namely,
+negatives that our predictor “catches,” namely,
+Note that as we decrease θ the recall increases (attaining the value 1 when θ =
+−∞). On the other hand, the precision and the speciﬁcity usually decrease as we
+decrease θ. Therefore, there is a tradeoff between precision and recall, and we can
+control it by changing θ. The loss functions deﬁned in the following use various
+techniques for combining both the precision and recall.
+(cid:2) Averaging sensitivity and speciﬁcity: This measure is the average of the sensitiv-
+ity and speciﬁcity, namely, 1
+. This is also the accuracy on positive
+2
+examples averaged with the accuracy on negative examples. Here, we set θ = 0
+and the corresponding loss function is (cid:23)(y(cid:3),y) = 1− 1
+
+recall than to precision, that is,
+
+(cid:2) F1-score: The F1 score is the harmonic mean of the precision and recall:
+. Its maximal value (of 1) is obtained when both precision and recall
+Precision
+are 1, and its minimal value (of 0) is obtained whenever one of them is 0 (even
+if the other one is 1). The F1 score can be written using the numbers a, b, c
+as follows; F1 = 2a
+2a+b+c. Again, we set θ = 0, and the loss function becomes
+(cid:23)(y(cid:3), y) = 1− F1.
+(cid:2) Fβ-score: It is like F1 score, but we attach β2 times more importance to
+. It can also be written as Fβ =
+(1+β2)a+b+β2c . Again, we set θ = 0, and the loss function becomes (cid:23)(y(cid:3),y) =
+1− Fβ.
+(cid:2) Recall at k: We measure the recall while the prediction must contain at most k
+positive labels. That is, we should set θ so that a + b ≤ k. This is convenient, for
+example, in the application of a fraud detection system, where a bank employee
+can only handle a small number of suspicious transactions.
+least k positive labels. That is, we should set θ so that a + b ≥ k.
+The measures deﬁned previously are often referred to as multivariate perfor-
+mance measures. Note that these measures are highly different from the average
+a+b+c+d . In the aforemen-
+zero-one loss, which in the preceding notation equals
+tioned example of fraud detection, when 99.9% of the examples are negatively
+labeled, the zero-one loss of predicting that all the examples are negatives is 0.1%.
+In contrast, the recall of such prediction is 0 and hence the F1 score is also 0, which
+means that the corresponding loss will be 1.
+
+(cid:2) Precision at k: We measure the precision while the prediction must contain at
+
+1+β2
++β2
+
+(1+β2)a
+
+b+d
+
+Precision
+
+Recall
+
+1
+
+1
+
+17.5.1 Linear Predictors for Bipartite Ranking
+We next describe how to train linear predictors for bipartite ranking. As in the
+previous section, a linear predictor for ranking is deﬁned to be
+
+hw(¯x) = ((cid:7)w,x1(cid:8), . . . ,(cid:7)w,xr(cid:8)).
+
+The corresponding loss function is one of the multivariate performance measures
+described before. The loss function depends on y(cid:3) = hw(¯x) via the binary vector it
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:52:55, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.018
+
+208 Multiclass and Ranking
+
+induces, which we denote by
+
+(cid:3)
+
+) = (sign(y
+
+(cid:3)
+1
+
+− θ), . . . , sign(y
+
+(cid:3)
+r
+
+b(y
+
+− θ)) ∈ {±1}r.
+
+(17.12)
+
+As in the previous section, to facilitate an efﬁcient algorithm we derive a con-
+vex surrogate loss function on (cid:23). The derivation is similar to the derivation of the
+generalized hinge loss for the NDCG ranking loss, as described in the previous
+section.
+V ⊆ {±1}r such that b(y(cid:3)
+
+Our ﬁrst observation is that for all the values of θ deﬁned before, there is some
+
+) can be rewritten as
+
+(cid:3)
+
+b(y
+
+) = argmax
+
+v∈V
+
+(cid:3)
+i .
+
+vi y
+
+(17.13)
+
+r(cid:7)
+
+i=1
+
+This is clearly true for the case θ = 0 if we choose V = {±1}r. The two measures for
+which θ is not taken to be 0 are precision at k and recall at k. For precision at k we
+can take V to be the set V≥k, containing all vectors in {±1}r whose number of ones
+is at least k. For recall at k, we can take V to be V≤k, which is deﬁned analogously.
+See Exercise 17.5.
+surrogate loss as follows. Assuming that y ∈ V , we have that
+
+Once we have deﬁned b as in Equation (17.13), we can easily derive a convex
+
+(cid:23)(hw(¯x),y) = (cid:23)(b(hw(¯x)),y)
+
+≤ (cid:23)(b(hw(¯x)),y)+ r(cid:7)
+(cid:13)
+(cid:23)(v,y)+ r(cid:7)
+
+≤ max
+v∈V
+
+i=1
+
+i=1
+
+(bi(hw(¯x))− yi )(cid:7)w,xi(cid:8)
+
+(cid:15)
+(vi − yi)(cid:7)w,xi(cid:8)
+
+.
+
+(17.14)
+
+The right-hand side is a convex function with respect to w.
+
+We can now solve the learning problem using SGD as described in
+Section 17.2.5. The main computational bottleneck is calculating a subgradient of
+the loss function, which is equivalent to ﬁnding v that achieves the maximum in
+Equation (17.14) (see Claim 14.6).
+
+In the following we describe how to ﬁnd this maximizer efﬁciently for any per-
+formance measure that can be written as a function of the numbers a, b, c, d given
+in Equation (17.11), and for which the set V contains all elements in {±1}r for which
+the values of a,b satisfy some constraints. For example, for “recall at k” the set V is
+all vectors for which a + b ≤ k.
+
+The idea is as follows. For any a,b ∈ [r], let
+
+¯Ya,b = {v : |{i : vi = 1∧ yi = 1}| = a ∧ |{i : vi = 1∧ yi = −1}| = b}.
+
+Any vector v ∈ V falls into ¯Ya,b for some a,b ∈ [r]. Furthermore, if ¯Ya,b ∩ V is not
+empty for some a,b ∈ [r] then ¯Ya,b ∩ V = ¯Ya,b. Therefore, we can search within each
+¯Ya,b that has a nonempty intersection with V separately, and then take the optimal
+value. The key observation is that once we are searching only within ¯Ya,b, the value
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:52:55, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.018
+
+17.6 Summary
+
+209
+
+of (cid:23) is ﬁxed so we only need to maximize the expression
+
+r(cid:7)
+
+vi(cid:7)w,xi(cid:8).
+
+max
+v∈ ¯Ya,b
+
+i=1
+
+Suppose the examples are sorted so that (cid:7)w,x1(cid:8) ≥ ··· ≥ (cid:7)w,xr(cid:8). Then, it is easy to
+verify that we would like to set vi to be positive for the smallest indices i. Doing
+this, with the constraint on a,b, amounts to setting vi = 1 for the a top ranked posi-
+tive examples and for the b top-ranked negative examples. This yields the following
+procedure.
+
+Solving Equation (17.14)
+
+input:
+
+(x1, . . . ,xr ),(y1, . . . , yr ),w, V , (cid:23)
+
+assumptions:
+(cid:23) is a function of a, b, c, d
+V contains all vectors for which f (a,b) = 1 for some function f
+initialize:
+P = |{i : yi = 1}|, N = |{i : yi = −1}|
+μ = ((cid:7)w,x1(cid:8), . . . ,(cid:7)w,xr(cid:8)), α(cid:7) = −∞
+sort examples so that μ1 ≥ μ2 ≥ ··· ≥ μr
+let i1, . . . ,i P be the (sorted) indices of the positive examples
+let j1, . . . , jN be the (sorted) indices of the negative examples
+for a = 0,1, . . . , P
+c = P − a
+for b = 0,1, . . . , N such that f (a,b) = 1
+d = N − b
+calculate (cid:23) using a, b, c, d
+= ··· = via
+= ··· = v jb
+set v1, . . . , vr s.t. vi1
+and the rest of the elements of v equal −1
+r
+i=1
+if α ≥ α(cid:7)
+α(cid:7) = α, v(cid:7) = v
+
+set α = (cid:23)+(cid:2)
+
+= v j1
+
+= 1
+
+vi μi
+
+output v(cid:7)
+
+17.6 SUMMARY
+Many real world supervised learning problems can be cast as learning a multiclass
+predictor. We started the chapter by introducing reductions of multiclass learning
+to binary learning. We then described and analyzed the family of linear predictors
+for multiclass learning. We have shown how this family can be used even if the
+number of classes is extremely large, as long as we have an adequate structure on
+the problem. Finally, we have described ranking problems. In Chapter 29 we study
+the sample complexity of multiclass learning in more detail.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:52:55, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.018
+
+210 Multiclass and Ranking
+
+17.7 BIBLIOGRAPHIC REMARKS
+The One-versus-All and All-Pairs approach reductions have been uniﬁed under the
+framework of Error Correction Output Codes (ECOC) (Dietterich & Bakiri 1995,
+Allwein, Schapire & Singer 2000). There are also other types of reductions such
+as tree-based classiﬁers (see, for example, Beygelzimer, Langford & Ravikumar
+(2007)). The limitations of reduction techniques have been studied in (Daniely et
+al. 2011, Daniely et al. 2012). See also Chapter 29, in which we analyze the sample
+complexity of multiclass learning.
+
+Direct approaches to multiclass learning with linear predictors have been studied
+in (Vapnik 1998, Weston & Watkins 1999, Crammer & Singer 2001). In particular,
+the multivector construction is due to Crammer and Singer (2001).
+
+Collins (2000) has shown how to apply the Perceptron algorithm for structured
+output problems. See also Collins (2002). A related approach is discriminative
+learning of conditional random ﬁelds; see Lafferty et al. (2001). Structured out-
+put SVM has been studied in (Weston et al. 2002, Collins 2002, Taskar et al. 2003,
+Tsochantaridis et al. 2004).
+
+The dynamic procedure we have presented for calculating the prediction hw(x)
+in the structured output section is similar to the forward-backward variables
+calculated by the Viterbi procedure in HMMs (see, for instance, (Rabiner &
+Juang 1986)). More generally, solving the maximization problem in structured out-
+put is closely related to the problem of inference in graphical models (see, for
+example, Koller & Friedman (2009a)).
+
+Chapelle, Le, and Smola (2007) proposed to learn a ranking function with
+respect to the NDCG loss using ideas from structured output learning. They also
+observed that the maximization problem in the deﬁnition of the generalized hinge
+loss is equivalent to the assignment problem.
+
+Agarwal and Roth (2005) analyzed the sample complexity of bipartite rank-
+ing. Joachims (2005) studied the applicability of structured output SVM to bipartite
+ranking with multivariate performance measures.
+
+17.8 EXERCISES
+17.1 Consider a set S of examples in Rn × [k] for which there exist vectors μ1, . . . , μk
+such that every example (x, y) ∈ S falls within a ball centered at μy whose radius
+is r ≥ 1. Assume also that for every i (cid:18)= j, (cid:9)μi − μ j(cid:9) ≥ 4r. Consider concatenating
+each instance by the constant 1 and then applying the multivector construction,
+namely,
+
+: ;< =
+(cid:22)(x, y) = [ 0, . . . ,0
+∈R(y−1)(n+1)
+
+:
+
+;<
+
+∈Rn+1
+
+, x1, . . . , xn ,1
+
+=
+
+: ;< =
+
+, 0, . . . ,0
+∈R(k−y)(n+1)
+
+].
+
+Show that there exists a vector w ∈ Rk(n+1) such that (cid:9)(w,(x, y)) = 0 for every
+(x, y) ∈ S.
+Hint: Observe that for every example (x, y) ∈ S we can write x = μy + v for some
+(cid:9)v(cid:9) ≤ r. Now, take w = [w1, . . . ,wk], where wi = [μi , −(cid:9)μi(cid:9)2/2].
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:52:55, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.018
+
+17.8 Exercises
+
+211
+
+17.2 Multiclass Perceptron: Consider the following algorithm:
+
+Multiclass Batch Perceptron
+
+Input:
+A training set (x1, y1), . . . ,(xm, ym)
+A class-sensitive feature mapping (cid:22) : X ×Y → Rd
+Initialize: w(1) = (0, . . . ,0) ∈ Rd
+For t = 1, 2, . . .
+If (∃ i and y (cid:18)= yi s.t. (cid:7)w(t), (cid:22)(xi , yi)(cid:8) ≤ (cid:7)w(t), (cid:22)(xi , y)(cid:8)) then
+w(t+1) = w(t) + (cid:22)(xi , yi)− (cid:22)(xi , y)
+else
+
+output w(t)
+
+Prove the following:
+Theorem 17.5. Assume that there exists w(cid:7) such that for all i and for all y (cid:18)= yi it
+holds that (cid:7)w(cid:7), (cid:22)(xi , yi)(cid:8) ≥ (cid:7)w(cid:7), (cid:22)(xi , y)(cid:8)+ 1. Let R = maxi ,y (cid:9)(cid:22)(xi , yi)− (cid:22)(xi , y)(cid:9).
+Then, the multiclass Perceptron algorithm stops after at most (R(cid:9)w(cid:7)(cid:9))2 iterations,
+and when it stops it holds that ∀i ∈ [m], yi = argmaxy
+for multiclass prediction. You can assume that (cid:23)(y(cid:3),y) =(cid:2)
+17.3 Generalize the dynamic programming procedure given in Section 17.3 for solv-
+ing the maximization problem given in the deﬁnition of ˆh in the SGD procedure
+, yt) for some
+
+(cid:7)w(t), (cid:22)(xi , y)(cid:8).
+
+(cid:3)
+δ(y
+t
+
+r
+t=1
+
+arbitrary function δ.
+
+17.4 Prove that Equation (17.7) holds.
+17.5 Show that
+
+the two deﬁnitions of π as deﬁned in Equation (17.12) and
+Equation (17.13) are indeed equivalent for all the multivariate performance
+measures.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:52:55, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.018
+
+

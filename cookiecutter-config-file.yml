@@ -1,0 +1,10 @@
+# This file contains values from Cookiecutter
+
+default_context:
+  project_name: "competency_maps"
+  project_description: "competency_maps is a python cli/package that is used to create a competency map from a learning corpus"
+  organization: "WSL-IIITB"
+  license: "Apache Software License 2.0"
+  version: "0.1.0"
+  github_name: "vns1311"
+  email: "shyam.vn@iiitb.org"

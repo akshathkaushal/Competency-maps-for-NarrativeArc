@@ -1,0 +1,1535 @@
+14
+
+Stochastic Gradient Descent
+
+Recall that the goal of learning is to minimize the risk function, LD(h) =
+Ez∼D [(cid:9)(h, z)]. We cannot directly minimize the risk function since it depends on
+the unknown distribution D. So far in the book, we have discussed learning meth-
+ods that depend on the empirical risk. That is, we ﬁrst sample a training set S and
+deﬁne the empirical risk function L S(h). Then, the learner picks a hypothesis based
+on the value of L S(h). For example, the ERM rule tells us to pick the hypothesis
+that minimizes L S(h) over the hypothesis class, H. Or, in the previous chapter, we
+discussed regularized risk minimization, in which we pick a hypothesis that jointly
+minimizes L S(h) and a regularization function over h.
+
+In this chapter we describe and analyze a rather different learning approach,
+which is called Stochastic Gradient Descent (SGD). As in Chapter 12 we will focus
+on the important family of convex learning problems, and following the notation
+in that chapter, we will refer to hypotheses as vectors w that come from a convex
+hypothesis class, H. In SGD, we try to minimize the risk function LD(w) directly
+using a gradient descent procedure. Gradient descent is an iterative optimization
+procedure in which at each step we improve the solution by taking a step along the
+negative of the gradient of the function to be minimized at the current point. Of
+course, in our case, we are minimizing the risk function, and since we do not know
+D we also do not know the gradient of LD(w). SGD circumvents this problem by
+allowing the optimization procedure to take a step along a random direction, as
+long as the expected value of the direction is the negative of the gradient. And, as
+we shall see, ﬁnding a random direction whose expected value corresponds to the
+gradient is rather simple even though we do not know the underlying distribution D.
+The advantage of SGD, in the context of convex learning problems, over the
+regularized risk minimization learning rule is that SGD is an efﬁcient algorithm that
+can be implemented in a few lines of code, yet still enjoys the same sample complex-
+ity as the regularized risk minimization rule. The simplicity of SGD also allows us
+to use it in situations when it is not possible to apply methods that are based on the
+empirical risk, but this is beyond the scope of this book.
+
+We start this chapter with the basic gradient descent algorithm and analyze its
+convergence rate for convex-Lipschitz functions. Next, we introduce the notion of
+
+150
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:49:51, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.015
+
+14.1 Gradient Descent
+
+151
+
+subgradient and show that gradient descent can be applied for nondifferentiable
+functions as well. The core of this chapter is Section 14.3, in which we describe
+the Stochastic Gradient Descent algorithm, along with several useful variants. We
+show that SGD enjoys an expected convergence rate similar to the rate of gradient
+descent. Finally, we turn to the applicability of SGD to learning problems.
+
+14.1 GRADIENT DESCENT
+Before we describe the stochastic gradient descent method, we would like to
+describe the standard gradient descent approach for minimizing a differentiable
+convex function f (w).
+The gradient of a differentiable function f : Rd → R at w, denoted ∇ f (w), is
+the vector of partial derivatives of f , namely, ∇ f (w) =
+. Gradient
+descent is an iterative algorithm. We start with an initial value of w (say, w(1) = 0).
+Then, at each iteration, we take a step in the direction of the negative of the gradient
+at the current point. That is, the update step is
+
+, . . . , ∂ f (w)
+∂w[d]
+
+∂ f (w)
+∂w[1]
+
+(cid:17)
+
+(cid:16)
+
+w(t+1) = w(t) − η∇ f (w(t)),
+
+(14.1)
+
+(cid:2)
+
+where η > 0 is a parameter to be discussed later. Intuitively, since the gradient
+points in the direction of the greatest rate of increase of f around w(t), the algo-
+rithm makes a small step in the opposite direction, thus decreasing the value of the
+function. Eventually, after T iterations, the algorithm outputs the averaged vector,
+¯w = 1
+T
+t=1 w(t). The output could also be the last vector, w(T ), or the best perform-
+ing vector, argmint∈[T ] f (w(t)), but taking the average turns out to be rather useful,
+especially when we generalize gradient descent to nondifferentiable functions and
+to the stochastic case.
+
+T
+
+Another way to motivate gradient descent is by relying on Taylor approxima-
+tion. The gradient of f at w yields the ﬁrst order Taylor approximation of f around
+w by f (u) ≈ f (w) + (cid:7)u − w,∇ f (w)(cid:8). When f is convex, this approximation lower
+bounds f , that is,
+
+f (u) ≥ f (w)+(cid:7)u− w,∇ f (w)(cid:8).
+
+Therefore, for w close to w(t) we have that f (w) ≈ f (w(t)) + (cid:7)w − w(t),∇ f (w(t))(cid:8).
+Hence we can minimize the approximation of f (w). However, the approximation
+might become loose for w, which is far away from w(t). Therefore, we would like to
+minimize jointly the distance between w and w(t) and the approximation of f around
+w(t). If the parameter η controls the tradeoff between the two terms, we obtain the
+update rule
+
+w(t+1) = argmin
+
+w
+
+1
+2
+
+(cid:9)w− w(t)(cid:9)2 + η
+
+(cid:16)
+
+(cid:17)
+f (w(t))+(cid:7)w− w(t),∇ f (w(t))(cid:8)
+
+.
+
+Solving the preceding by taking the derivative with respect to w and comparing it to
+zero yields the same update rule as in Equation (14.1).
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:49:51, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.015
+
+152
+
+Stochastic Gradient Descent
+
+Figure 14.1. An illustration of the gradient descent algorithm. The function to be
+minimized is 1.25(x1 + 6)2 + (x2 − 8)2.
+
+14.1.1 Analysis of GD for Convex-Lipschitz Functions
+To analyze the convergence rate of the GD algorithm, we limit ourselves to the case
+of convex-Lipschitz functions (as we have seen, many problems lend themselves
+easily to this setting). Let w(cid:7) be any vector and let B be an upper bound on (cid:9)w(cid:7)(cid:9). It
+is convenient to think of w(cid:7) as the minimizer of f (w), but the analysis that follows
+holds for every w(cid:7).
+
+We would like to obtain an upper bound on the suboptimality of our solu-
+T
+t=1 w(t). From the
+
+f ( ¯w) − f (w(cid:7)), where ¯w = 1
+
+T
+
+(cid:2)
+
+tion with respect to w(cid:7), namely,
+deﬁnition of ¯w, and using Jensen’s inequality, we have that
+− f (w(cid:7))
+(cid:17)
+
+f ( ¯w)− f (w(cid:7)) = f
+
+(cid:27)
+
+w(t)
+
+1
+T
+
+t=1
+
+(cid:26)
+T(cid:7)
+(cid:16)
+T(cid:7)
+(cid:16)
+T(cid:7)
+
+t=1
+
+t=1
+
+≤ 1
+T
+
+= 1
+T
+
+f (w(t))
+
+− f (w(cid:7))
+(cid:17)
+f (w(t))− f (w(cid:7))
+
+.
+
+For every t, because of the convexity of f , we have that
+
+f (w(t))− f (w(cid:7)) ≤ (cid:7)w(t) − w(cid:7),∇ f (w(t))(cid:8).
+
+Combining the preceding we obtain
+
+f ( ¯w)− f (w(cid:7)) ≤ 1
+T
+
+T(cid:7)
+(cid:7)w(t) − w(cid:7),∇ f (w(t))(cid:8).
+
+t=1
+
+To bound the right-hand side we rely on the following lemma:
+
+(14.2)
+
+(14.3)
+
+Lemma 14.1. Let v1, . . . ,vT be an arbitrary sequence of vectors. Any algorithm with
+an initialization w(1) = 0 and an update rule of the form
+
+w(t+1) = w(t) − ηvt
+
+(14.4)
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:49:51, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.015
+
+14.1 Gradient Descent
+
+153
+
+satisﬁes
+
+T(cid:7)
+
+(cid:7)w(t) − w(cid:7),vt(cid:8) ≤ (cid:9)w(cid:7)(cid:9)2
+
+T(cid:7)
+
++ η
+2
+
+(cid:9)vt(cid:9)2.
+
+(14.5)
+(cid:31)
+In particular, for every B, ρ > 0, if for all t we have that (cid:9)vt(cid:9) ≤ ρ and if we set η =
+ρ2 T , then for every w(cid:7) with (cid:9)w(cid:7)(cid:9) ≤ B we have
+
+t=1
+
+t=1
+
+2η
+
+B2
+
+T(cid:7)
+
+t=1
+
+1
+T
+
+(cid:7)w(t) − w(cid:7),vt(cid:8) ≤ B ρ√
+T
+
+.
+
+Proof. Using algebraic manipulations (completing the square), we obtain:
+
+(cid:7)w(t) − w(cid:7),vt(cid:8) = 1
+η
+= 1
+2η
+= 1
+2η
+
+(cid:7)w(t) − w(cid:7), ηvt(cid:8)
+(−(cid:9)w(t) − w(cid:7) − ηvt(cid:9)2 +(cid:9)w(t) − w(cid:7)(cid:9)2 + η2(cid:9)vt(cid:9)2)
+(−(cid:9)w(t+1) − w(cid:7)(cid:9)2 +(cid:9)w(t) − w(cid:7)(cid:9)2)+ η
+2
+
+(cid:9)vt(cid:9)2,
+
+where the last equality follows from the deﬁnition of the update rule. Summing the
+equality over t, we have
+
+(cid:16)
+−(cid:9)w(t+1) − w(cid:7)(cid:9)2 +(cid:9)w(t) − w(cid:7)(cid:9)2
+
+(cid:17)
+
+T(cid:7)
+
+t=1
+
+T(cid:7)
+
+t=1
+
++ η
+2
+
+(cid:9)vt(cid:9)2. (14.6)
+
+(cid:7)w(t) − w(cid:7),vt(cid:8) = 1
+2η
+
+T(cid:7)
+
+t=1
+
+The ﬁrst sum on the right-hand side is a telescopic sum that collapses to
+
+(cid:9)w(1) − w(cid:7)(cid:9)2 −(cid:9)w(T+1) − w(cid:7)(cid:9)2.
+
+Plugging this in Equation (14.6), we have
+
+T(cid:7)
+
+t=1
+
+(cid:7)w(t) − w(cid:7),vt(cid:8) = 1
+2η
+
+((cid:9)w(1) − w(cid:7)(cid:9)2 −(cid:9)w(T+1) − w(cid:7)(cid:9)2)+ η
+2
+
+T(cid:7)
+
+(cid:9)vt(cid:9)2
+
+≤ 1
+2η
+
+= 1
+2η
+
+(cid:9)w(1) − w(cid:7)(cid:9)2 + η
+T(cid:7)
+2
+
+(cid:9)w(cid:7)(cid:9)2 + η
+2
+
+t=1
+(cid:9)vt(cid:9)2,
+
+t=1
+
+T(cid:7)
+
+t=1
+
+(cid:9)vt(cid:9)2
+
+where the last equality is due to the deﬁnition w(1) = 0. This proves the ﬁrst part of
+the lemma (Equation (14.5)). The second part follows by upper bounding (cid:9)w(cid:7)(cid:9) by
+B, (cid:9)vt(cid:9) by ρ, dividing by T , and plugging in the value of η.
+
+Lemma 14.1 applies to the GD algorithm with vt = ∇ f (w(t)). As we will show
+later in Lemma 14.7, if f is ρ-Lipschitz, then (cid:9)∇ f (w(t))(cid:9) ≤ ρ. We therefore satisfy
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:49:51, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.015
+
+154
+
+Stochastic Gradient Descent
+
+the lemma’s conditions and achieve the following corollary:
+
+Corollary 14.2. Let
+argmin{w:(cid:9)w(cid:9)≤B} f (w). If we run the GD algorithm on f for T steps with η =
+then the output vector ¯w satisﬁes
+
+f be a convex, ρ-Lipschitz function,
+
+(cid:31)
+
+and let w(cid:7) ∈
+B2
+ρ2 T ,
+
+f ( ¯w)− f (w(cid:7)) ≤ B ρ√
+T
+
+.
+
+Furthermore, for every (cid:2) > 0, to achieve f ( ¯w) − f (w(cid:7)) ≤ (cid:2), it sufﬁces to run the GD
+algorithm for a number of iterations that satisﬁes
+T ≥ B2ρ2
+
+.
+
+(cid:2)2
+
+14.2 SUBGRADIENTS
+The GD algorithm requires that the function f be differentiable. We now generalize
+the discussion beyond differentiable functions. We will show that the GD algorithm
+can be applied to nondifferentiable functions by using a so-called subgradient of
+f (w) at w(t), instead of the gradient.
+
+To motivate the deﬁnition of subgradients, recall that for a convex function f ,
+
+the gradient at w deﬁnes the slope of a tangent that lies below f , that is,
+
+f (u) ≥ f (w)+(cid:7)u− w,∇ f (w)(cid:8).
+An illustration is given on the left-hand side of Figure 14.2.
+
+∀u,
+
+(14.7)
+
+The existence of a tangent that lies below f is an important property of convex
+
+functions, which is in fact an alternative characterization of convexity.
+Lemma 14.3. Let S be an open convex set. A function f : S → R is convex iff for
+every w ∈ S there exists v such that
+∀u ∈ S,
+
+f (u) ≥ f (w)+(cid:7)u− w,v(cid:8).
+
+(14.8)
+
+The proof of this lemma can be found in many convex analysis textbooks (e.g.,
+(Borwein & Lewis 2006)). The preceding inequality leads us to the deﬁnition of
+subgradients.
+
+Deﬁnition 14.4. (Subgradients). A vector v that satisﬁes Equation (14.8) is called a
+subgradient of f at w. The set of subgradients of f at w is called the differential set
+and denoted ∂ f (w).
+
+An illustration of subgradients is given on the right-hand side of Figure 14.2. For
+scalar functions, a subgradient of a convex function f at w is a slope of a line that
+touches f at w and is not above f elsewhere.
+
+14.2.1 Calculating Subgradients
+How do we construct subgradients of a given convex function? If a function is dif-
+ferentiable at a point w, then the differential set is trivial, as the following claim
+shows.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:49:51, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.015
+
+14.2 Subgradients
+
+155
+
+f (u)
+
+f(w) + 〈u − w, ∇f(w)〉
+
+f (w)
+
+w
+
+u
+
+Figure 14.2. Left: The right-hand side of Equation (14.7) is the tangent of f at w. For a
+convex function, the tangent lower bounds f. Right: Illustration of several subgradients
+of a nondifferentiable convex function.
+
+is differentiable at w then ∂ f (w) contains a single element – the
+
+Claim 14.5. If f
+gradient of f at w, ∇ f (w).
+Example 14.1 (The Differential Set of the Absolute Function). Consider the abso-
+lute value function f (x) = |x|. Using Claim 14.5, we can easily construct the
+differential set for the differentiable parts of f , and the only point that requires
+special attention is x0 = 0. At that point, it is easy to verify that the subdifferential is
+the set of all numbers between −1 and 1. Hence:
+
+⎧⎪⎨
+⎪⎩{1}
+
+{−1}
+[− 1,1]
+
+if x > 0
+if x < 0
+if x = 0
+
+∂ f (x) =
+
+For many practical uses, we do not need to calculate the whole set of subgradi-
+ents at a given point, as one member of this set would sufﬁce. The following claim
+shows how to construct a sub-gradient for pointwise maximum functions.
+Claim 14.6. Let g(w) = maxi∈[r] gi(w) for r convex differentiable functions g1, . . . , gr .
+Given some w, let j ∈ argmaxi gi(w). Then ∇g j(w) ∈ ∂g(w).
+Proof. Since g j is convex we have that for all u
+
+g j(u) ≥ g j(w)+(cid:7)u− w,∇g j (w)(cid:8).
+
+Since g(w) = g j (w) and g(u) ≥ g j(u) we obtain that
+
+g(u) ≥ g(w)+(cid:7)u− w,∇g j (w)(cid:8),
+
+which concludes our proof.
+
+Example 14.2 (A Subgradient of the Hinge Loss). Recall the hinge loss function
+f (w) = max{0,1 − y(cid:7)w, x(cid:8)} for some vector x and scalar y. To
+from Section 12.3,
+calculate a subgradient of the hinge loss at some w we rely on the preceding claim
+and obtain that the vector v deﬁned in the following is a subgradient of the hinge
+loss at w:
+
+(cid:5)
+
+v =
+
+if 1− y(cid:7)w, x(cid:8) ≤ 0
+0
+−yx if 1− y(cid:7)w, x(cid:8) > 0
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:49:51, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.015
+
+156
+
+Stochastic Gradient Descent
+
+14.2.2 Subgradients of Lipschitz Functions
+Recall that a function f : A → R is ρ-Lipschitz if for all u,v ∈ A
+
+| f (u)− f (v)| ≤ ρ (cid:9)u− v(cid:9).
+
+The following lemma gives an equivalent deﬁnition using norms of subgradients.
+Lemma 14.7. Let A be a convex open set and let f : A → R be a convex function.
+Then, f is ρ-Lipschitz over A iff for all w ∈ A and v ∈ ∂ f (w) we have that (cid:9)v(cid:9) ≤ ρ.
+Proof. Assume that for all v∈ ∂ f (w) we have that (cid:9)v(cid:9) ≤ ρ. Since v∈ ∂ f (w) we have
+
+f (w)− f (u) ≤ (cid:7)v,w− u(cid:8).
+
+Bounding the right-hand side using Cauchy-Schwartz inequality we obtain
+
+f (w)− f (u) ≤ (cid:7)v, w− u(cid:8) ≤ (cid:9)v(cid:9)(cid:9)w− u(cid:9) ≤ ρ(cid:9)w− u(cid:9).
+
+An analogous argument can show that f (u) − f (w) ≤ ρ(cid:9)w − u(cid:9). Hence f
+is ρ-
+Lipschitz.
+is ρ-Lipschitz. Choose some w ∈ A,v ∈ ∂ f (w). Since A is
+open, there exists (cid:2) > 0 such that u= w+(cid:2)v/(cid:9)v(cid:9) belongs to A. Therefore, (cid:7)u−w, v(cid:8)=
+(cid:2)(cid:9)v(cid:9) and (cid:9)u− w(cid:9) = (cid:2). From the deﬁnition of the subgradient,
+
+Now assume that f
+
+f (u)− f (w) ≥ (cid:7)v,u− w(cid:8) = (cid:2)(cid:9)v(cid:9).
+
+On the other hand, from the Lipschitzness of f we have
+ρ (cid:2) = ρ (cid:9)u− w(cid:9) ≥ f (u)− f (w).
+Combining the two inequalities we conclude that (cid:9)v(cid:9) ≤ ρ.
+
+14.2.3 Subgradient Descent
+The gradient descent algorithm can be generalized to nondifferentiable functions
+by using a subgradient of f (w) at w(t), instead of the gradient. The analysis of the
+convergence rate remains unchanged: Simply note that Equation (14.3) is true for
+subgradients as well.
+
+14.3 STOCHASTIC GRADIENT DESCENT (SGD)
+In stochastic gradient descent we do not require the update direction to be based
+exactly on the gradient. Instead, we allow the direction to be a random vector and
+only require that its expected value at each iteration will equal the gradient direction.
+Or, more generally, we require that the expected value of the random vector will be
+a subgradient of the function at the current vector.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:49:51, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.015
+
+14.3 Stochastic Gradient Descent (SGD)
+
+157
+
+Figure 14.3. An illustration of the gradient descent algorithm (left) and the stochastic
+gradient descent algorithm (right). The function to be minimized is 1.25(x + 6)2 + (y − 8)2.
+For the stochastic case, the solid line depicts the averaged value of w.
+
+Stochastic Gradient Descent (SGD) for minimizing f (w)
+
+parameters: Scalar η > 0, integer T > 0
+initialize: w(1) = 0
+for t = 1,2, . . . , T
+choose vt at random from a distribution such that E[vt |w(t)] ∈ ∂ f (w(t))
+(cid:2)
+update w(t+1) = w(t) − ηvt
+output ¯w = 1
+
+T
+t=1 w(t)
+
+T
+
+An illustration of stochastic gradient descent versus gradient descent is given
+in Figure 14.3. As we will see in Section 14.5, in the context of learning problems,
+it is easy to ﬁnd a random vector whose expectation is a subgradient of the risk
+function.
+
+14.3.1 Analysis of SGD for Convex-Lipschitz-Bounded Functions
+Recall the bound we achieved for the GD algorithm in Corollary 14.2. For the
+stochastic case, in which only the expectation of vt is in ∂ f (w(t)), we cannot directly
+apply Equation (14.3). However, since the expected value of vt is a subgradient of
+f at w(t), we can still derive a similar bound on the expected output of stochastic
+gradient descent. This is formalized in the following theorem.
+
+Theorem 14.8. Let B, ρ > 0. Let
+argminw:(cid:9)w(cid:9)≤B f (w). Assume that SGD is run for T iterations with η =
+Assume also that for all t, (cid:9)vt(cid:9) ≤ ρ with probability 1. Then,
+
+f be a convex function and let w(cid:7) ∈
+B2
+ρ2 T .
+
+(cid:31)
+
+E[ f ( ¯w)]− f (w(cid:7)) ≤ B ρ√
+T
+
+.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:49:51, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.015
+
+158
+
+Stochastic Gradient Descent
+Therefore, for any (cid:2) > 0, to achieve E[ f ( ¯w)]− f (w(cid:7)) ≤ (cid:2), it sufﬁces to run the SGD
+algorithm for a number of iterations that satisﬁes
+T ≥ B2ρ2
+(cid:2)2
+
+.
+
+Proof. Let us introduce the notation v1:t to denote the sequence v1, . . . ,vt. Taking
+expectation of Equation (14.2), we obtain
+[ f ( ¯w)− f (w(cid:7))] ≤ E
+v1:T
+
+(cid:15)
+( f (w(t))− f (w(cid:7)))
+
+T(cid:7)
+
+E
+v1:T
+
+(cid:13)
+
+1
+T
+
+.
+
+t=1
+
+Since Lemma 14.1 holds for any sequence v1,v2,...vT , it applies to SGD as well. By
+taking expectation of the bound in the lemma we have
+
+(cid:13)
+
+T(cid:7)
+
+(cid:15)
+≤ B ρ√
+(cid:7)w(t) − w(cid:7),vt(cid:8)
+T
+(cid:15)
+(cid:13)
+T(cid:7)
+( f (w(t))− f (w(cid:7)))
+
+E
+v1:T
+
+t=1
+
+1
+T
+
+≤ E
+v1:T
+
+1
+T
+
+t=1
+
+(cid:15)
+(cid:7)w(t) − w(cid:7),vt(cid:8)
+
+.
+
+(14.9)
+
+,
+
+(14.10)
+
+It is left to show that
+
+(cid:13)
+
+E
+v1:T
+
+1
+T
+
+T(cid:7)
+
+t=1
+
+(cid:13)
+
+which we will hereby prove.
+
+Using the linearity of the expectation we have
+
+(cid:15)
+T(cid:7)
+(cid:7)w(t) − w(cid:7),vt(cid:8)
+
+T(cid:7)
+
+= 1
+T
+
+E
+v1:T
+
+t=1
+
+1
+T
+
+E
+v1:T
+
+t=1
+
+[(cid:7)w(t) − w(cid:7),vt(cid:8)].
+
+Next, we recall the law of total expectation: For every two random variables α, β,
+and a function g, Eα [g(α)] = Eβ Eα [g(α)|β]. Setting α = v1:t and β = v1:t−1 we get
+that
+
+E
+v1:T
+
+[(cid:7)w(t) − w(cid:7), vt(cid:8)] = E
+v1: t
+= E
+v1: t−1
+
+[(cid:7)w(t) − w(cid:7), vt(cid:8)]
+
+[(cid:7)w(t) − w(cid:7),vt(cid:8)|v1:t−1].
+
+E
+v1: t
+
+Once we know v1:t−1, the value of w(t) is not random any more and therefore
+
+E
+v1: t−1
+
+E
+v1: t
+
+[(cid:7)w(t) − w(cid:7),vt(cid:8)|v1:t−1] = E
+v1: t−1
+
+(cid:7)w(t) − w(cid:7), E
+
+[vt |v1:t−1](cid:8).
+
+vt
+
+Since w(t) only depends on v1:t−1 and SGD requires that Evt [vt |w(t)] ∈ ∂ f (w(t)) we
+obtain that Evt [vt |v1:t−1] ∈ ∂ f (w(t)). Thus,
+
+(cid:7)w(t) − w(cid:7), E
+
+[vt |v1:t−1](cid:8) ≥ E
+v1: t−1
+
+vt
+
+E
+v1: t−1
+
+[ f (w(t))− f (w(cid:7))].
+
+Overall, we have shown that
+
+E
+v1:T
+
+[(cid:7)w(t) − w(cid:7),vt(cid:8)] ≥ E
+v1: t−1
+= E
+v1:T
+
+[ f (w(t))− f (w(cid:7))]
+[ f (w(t))− f (w(cid:7))].
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:49:51, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.015
+
+14.4 Variants
+
+159
+
+Summing over t, dividing by T , and using the linearity of expectation, we get that
+Equation (14.10) holds, which concludes our proof.
+
+14.4 VARIANTS
+In this section we describe several variants of Stochastic Gradient Descent.
+
+14.4.1 Adding a Projection Step
+In the previous analyses of the GD and SGD algorithms, we required that the norm
+of w(cid:7) will be at most B, which is equivalent to requiring that w(cid:7) is in the set H =
+{w : (cid:9)w(cid:9) ≤ B}. In terms of learning, this means restricting ourselves to a B-bounded
+hypothesis class. Yet any step we take in the opposite direction of the gradient (or
+its expected direction) might result in stepping out of this bound, and there is even
+no guarantee that ¯w satisﬁes it. We show in the following how to overcome this
+problem while maintaining the same convergence rate.
+
+The basic idea is to add a projection step; namely, we will now have a two-step
+update rule, where we ﬁrst subtract a subgradient from the current value of w and
+then project the resulting vector onto H. Formally,
+
+2 ) = w(t) − ηvt
+
+1. w(t+ 1
+2 )(cid:9)
+2. w(t+1) = argminw∈H(cid:9)w− w(t+ 1
+The projection step replaces the current value of w by the vector in H closest to it.
+Clearly, the projection step guarantees that w(t) ∈ H for all t. Since H is convex
+this also implies that ¯w ∈ H as required. We next show that the analysis of SGD with
+projections remains the same. This is based on the following lemma.
+Lemma 14.9 (Projection Lemma). Let H be a closed convex set and let v be the
+projection of w onto H, namely,
+
+Then, for every u ∈ H,
+
+v = argmin
+x∈H
+
+(cid:9)x− w(cid:9)2.
+
+(cid:9)w− u(cid:9)2 −(cid:9)v− u(cid:9)2 ≥ 0.
+
+Proof. By the convexity of H, for every α ∈ (0,1) we have that v + α(u − v) ∈ H.
+Therefore, from the optimality of v we obtain
+(cid:9)v− w(cid:9)2 ≤ (cid:9)v+ α(u− v)− w(cid:9)2
+
+= (cid:9)v− w(cid:9)2 + 2α(cid:7)v− w,u− v(cid:8)+ α2(cid:9)u− v(cid:9)2.
+
+Rearranging, we obtain
+
+2(cid:7)v− w,u− v(cid:8) ≥ −α(cid:9)u− v(cid:9)2.
+
+Taking the limit α → 0 we get that
+
+(cid:7)v− w,u− v(cid:8) ≥ 0.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:49:51, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.015
+
+160
+
+Stochastic Gradient Descent
+
+Therefore,
+
+(cid:9)w− u(cid:9)2 = (cid:9)w− v+ v− u(cid:9)2
+
+= (cid:9)w− v(cid:9)2 +(cid:9)v− u(cid:9)2 + 2(cid:7)v− w, u− v(cid:8)
+≥ (cid:9)v− u(cid:9)2.
+
+Equipped with the preceding lemma, we can easily adapt the analysis of SGD to
+the case in which we add projection steps on a closed and convex set. Simply note
+that for every t,
+
+(cid:9)w(t+1) − w(cid:7)(cid:9)2 −(cid:9)w(t) − w(cid:7)(cid:9)2
+= (cid:9)w(t+1) − w(cid:7)(cid:9)2 −(cid:9)w(t+ 1
+≤ (cid:9)w(t+ 1
+
+2 ) − w(cid:7)(cid:9)2 −(cid:9)w(t) − w(cid:7)(cid:9)2.
+
+2 ) − w(cid:7)(cid:9)2 +(cid:9)w(t+ 1
+
+2 ) − w(cid:7)(cid:9)2 −(cid:9)w(t) − w(cid:7)(cid:9)2
+
+Therefore, Lemma 14.1 holds when we add projection steps and hence the rest of
+the analysis follows directly.
+
+14.4.2 Variable Step Size
+Another variant of SGD is decreasing the step size as a function of t. That is, rather
+than updating with a constant η, we use ηt . For instance, we can set ηt = B
+√
+t and
+achieve a bound similar to Theorem 14.8. The idea is that when we are closer to the
+minimum of the function, we take our steps more carefully, so as not to “overshoot”
+the minimum.
+
+ρ
+
+(cid:2)
+
+14.4.3 Other Averaging Techniques
+We have set the output vector to be ¯w = 1
+T
+t=1 w(t). There are alternative
+approaches such as outputting w(t) for some random t ∈ [t], or outputting the aver-
+age of w(t) over the last αT iterations, for some α ∈ (0,1). One can also take
+a weighted average of the last few iterates. These more sophisticated averaging
+schemes can improve the convergence speed in some situations, such as in the case
+of strongly convex functions deﬁned in the following.
+
+T
+
+14.4.4 Strongly Convex Functions*
+In this section we show a variant of SGD that enjoys a faster convergence rate for
+problems in which the objective function is strongly convex (see Deﬁnition 13.4 of
+strong convexity in the previous chapter). We rely on the following claim, which
+generalizes Lemma 13.5.
+Claim 14.10. If f is λ-strongly convex then for every w,u and v ∈ ∂ f (w) we have
+
+(cid:7)w− u,v(cid:8) ≥ f (w)− f (u)+ λ
+
+2
+
+(cid:9)w− u(cid:9)2.
+
+The proof is similar to the proof of Lemma 13.5 and is left as an exercise.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:49:51, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.015
+
+SGD for minimizing a λ-strongly convex function
+
+14.4 Variants
+
+161
+
+Goal: Solve minw∈H f (w)
+parameter: T
+initialize: w(1) = 0
+for t = 1, . . . , T
+Choose a random vector vt s.t. E[vt|w(t)] ∈ ∂ f (w(t))
+Set ηt = 1/(λt)
+Set w(t+ 1
+(cid:2)
+Set w(t+1) = argminw∈H(cid:9)w− w(t+ 1
+output: ¯w = 1
+
+2 ) = w(t) − ηtvt
+
+2 )(cid:9)2
+
+T
+t=1 w(t)
+
+T
+
+Theorem 14.11. Assume that f is λ-strongly convex and that E[(cid:9)vt(cid:9)2] ≤ ρ2. Let w(cid:7) ∈
+argminw∈H f (w) be an optimal solution. Then,
+E[ f ( ¯w)]− f (w(cid:7)) ≤ ρ2
+2 λ T
+
+(1+ log(T )).
+
+Proof. Let ∇(t) = E[vt|w(t)]. Since f is strongly convex and ∇(t) is in the subgradient
+set of f at w(t) we have that
+
+(cid:7)w(t) − w(cid:7), ∇(t)(cid:8) ≥ f (w(t))− f (w(cid:7))+ λ
+
+(cid:9)w(t) − w(cid:7)(cid:9)2.
+
+2
+
+Next, we show that
+
+(cid:7)w(t) − w(cid:7), ∇(t)(cid:8) ≤ E[(cid:9)w(t) − w(cid:7)(cid:9)2 −(cid:9)w(t+1) − w(cid:7)(cid:9)2]
+
+2 ηt
+
++ ηt
+2
+
+ρ2.
+
+Since w(t+1) is the projection of w(t+ 1
+w(cid:7)(cid:9)2 ≥ (cid:9)w(t+1) − w(cid:7)(cid:9)2. Therefore,
+
+2 ) onto H, and w(cid:7) ∈ H we have that (cid:9)w(t+ 1
+
+(14.11)
+
+(14.12)
+2 ) −
+
+(cid:9)w(t) − w(cid:7)(cid:9)2 −(cid:9)w(t+1) − w(cid:7)(cid:9)2 ≥ (cid:9)w(t) − w(cid:7)(cid:9)2 −(cid:9)w(t+ 1
+= 2ηt(cid:7)w(t) − w(cid:7), vt(cid:8)− η2
+
+2 ) − w(cid:7)(cid:9)2
+(cid:9)vt(cid:9)2.
+
+t
+
+Taking expectation of both sides, rearranging, and using the assumption E[(cid:9)vt(cid:9)2] ≤
+ρ2 yield Equation (14.12). Comparing Equation (14.11) and Equation (14.12) and
+summing over t we obtain
+
+T(cid:7)
+
+t=1
+
+( E [ f (w(t))]− f (w(cid:7)))
+
+(cid:26)
+
+(cid:13)
+T(cid:7)
+
+≤ E
+
+(cid:27)(cid:15)
+
++ ρ2
+2
+
+T(cid:7)
+
+t=1
+
+ηt .
+
+(cid:9)w(t) − w(cid:7)(cid:9)2 −(cid:9)w(t+1) − w(cid:7)(cid:9)2
+
+2 ηt
+
+− λ
+
+2
+
+(cid:9)w(t) − w(cid:7)(cid:9)2
+
+Next, we use the deﬁnition ηt = 1/(λt) and note that the ﬁrst sum on the right-hand
+side of the equation collapses to −λT(cid:9)w(T+1) − w(cid:7)(cid:9)2 ≤ 0. Thus,
+
+( E[ f (w(t))]− f (w(cid:7))) ≤ ρ2
+2 λ
+
+1
+t
+
+≤ ρ2
+2 λ
+
+(1+ log(T )).
+
+T(cid:7)
+
+t=1
+
+t=1
+
+T(cid:7)
+
+t=1
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:49:51, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.015
+
+162
+
+Stochastic Gradient Descent
+
+The theorem follows from the preceding by dividing by T and using Jensen’s
+inequality.
+
+Remark 14.3. Rakhlin, Shamir, and Sridharan ((2012)) derived a convergence rate
+in which the log(T ) term is eliminated for a variant of the algorithm in which we
+output the average of the last T /2 iterates, ¯w = 2
+T
+t=T /2+1 w(t). Shamir and Zhang
+(2013) have shown that Theorem 14.11 holds even if we output ¯w = w(T ).
+
+T
+
+(cid:2)
+
+14.5 LEARNING WITH SGD
+We have so far introduced and analyzed the SGD algorithm for general convex
+functions. Now we shall consider its applicability to learning tasks.
+
+14.5.1 SGD for Risk Minimization
+Recall that in learning we face the problem of minimizing the risk function
+
+LD(w) = E
+
+z∼D [(cid:9)(w, z)].
+
+We have seen the method of empirical risk minimization, where we minimize the
+empirical risk, L S(w), as an estimate to minimizing LD(w). SGD allows us to take
+a different approach and minimize LD(w) directly. Since we do not know D, we
+cannot simply calculate ∇ LD(w(t)) and minimize it with the GD method. With SGD,
+however, all we need is to ﬁnd an unbiased estimate of the gradient of LD(w), that
+is, a random vector whose conditional expected value is ∇ LD(w(t)). We shall now
+see how such an estimate can be easily constructed.
+
+For simplicity, let us ﬁrst consider the case of differentiable loss functions. Hence
+the risk function LD is also differentiable. The construction of the random vector vt
+will be as follows: First, sample z ∼ D. Then, deﬁne vt to be the gradient of the
+function (cid:9)(w, z) with respect to w, at the point w(t). Then, by the linearity of the
+gradient we have
+
+E[vt|w(t)] = E
+
+z∼D [∇(cid:9)(w(t), z)] = ∇ E
+
+z∼D [(cid:9)(w(t), z)] = ∇ LD(w(t)).
+
+(14.13)
+
+The gradient of the loss function (cid:9)(w, z) at w(t) is therefore an unbiased estimate of
+the gradient of the risk function LD(w(t)) and is easily constructed by sampling a
+single fresh example z ∼ D at each iteration t.
+
+The same argument holds for nondifferentiable loss functions. We simply let vt
+
+be a subgradient of (cid:9)(w, z) at w(t). Then, for every u we have
+
+(cid:9)(u, z)− (cid:9)(w(t), z) ≥ (cid:7)u− w(t),vt(cid:8).
+
+Taking expectation on both sides with respect to z ∼ D and conditioned on the value
+of w(t) we obtain
+
+LD(u)− LD(w(t)) = E[(cid:9)(u, z)− (cid:9)(w(t), z)|w(t)]
+
+≥ E[(cid:7)u− w(t),vt(cid:8)|w(t)]
+= (cid:7)u− w(t), E [vt|w(t)](cid:8).
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:49:51, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.015
+
+14.5 Learning with SGD
+
+163
+
+It follows that E[vt|w(t)] is a subgradient of LD(w) at w(t).
+
+To summarize, the stochastic gradient descent framework for minimizing the
+
+risk is as follows.
+
+Stochastic Gradient Descent (SGD) for minimizing LD(w)
+
+parameters: Scalar η > 0, integer T > 0
+initialize: w(1) = 0
+for t = 1,2, . . . , T
+sample z ∼ D
+pick vt ∈ ∂(cid:9)(w(t), z)
+(cid:2)
+update w(t+1) = w(t) − ηvt
+output ¯w = 1
+
+T
+t=1 w(t)
+
+T
+
+We shall now use our analysis of SGD to obtain a sample complexity analysis for
+
+learning convex-Lipschitz-bounded problems. Theorem 14.8 yields the following:
+
+Corollary 14.12. Consider a convex-Lipschitz-bounded learning problem with
+parameters ρ, B. Then, for every (cid:2) > 0, if we run the SGD method for minimizing
+LD(w) with a number of iterations (i.e., number of examples)
+
+(cid:31)
+
+and with η =
+
+T ≥ B2ρ2
+
+(cid:2)2
+
+B2
+ρ2 T , then the output of SGD satisﬁes
+
+E[LD( ¯w)] ≤ min
+
+w∈H LD(w)+ (cid:2).
+
+It is interesting to note that the required sample complexity is of the same order
+of magnitude as the sample complexity guarantee we derived for regularized loss
+minimization. In fact, the sample complexity of SGD is even better than what we
+have derived for regularized loss minimization by a factor of 8.
+
+14.5.2 Analyzing SGD for Convex-Smooth Learning Problems
+In the previous chapter we saw that the regularized loss minimization rule also
+learns the class of convex-smooth-bounded learning problems. We now show that
+the SGD algorithm can be also used for such problems.
+Theorem 14.13. Assume that for all z, the loss function (cid:9)(·, z) is convex, β-smooth,
+and nonnegative. Then, if we run the SGD algorithm for minimizing LD(w) we have
+that for every w(cid:7),
+
+(cid:26)
+
+E[LD( ¯w)] ≤ 1
+
+1− ηβ
+
+LD(w(cid:7))+ (cid:9)w(cid:7)(cid:9)2
+
+2η T
+
+(cid:27)
+
+.
+
+Proof. Recall that if a function is β-smooth and nonnegative then it is self-bounded:
+
+(cid:9)∇ f (w)(cid:9)2 ≤ 2β f (w).
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:49:51, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.015
+
+164
+
+Stochastic Gradient Descent
+
+Combining the preceding with the self-boundedness of ft yields
+
+To analyze SGD for convex-smooth problems, let us deﬁne z1, . . . , zT the random
+samples of the SGD algorithm, let ft ( · ) = (cid:9)(·, zt ), and note that vt = ∇ ft (w(t)).
+ft is a convex function and therefore ft (w(t)) − ft (w(cid:7)) ≤ (cid:7)vt ,w(t) − w(cid:7)(cid:8).
+For all t,
+T(cid:7)
+Summing over t and using Lemma 14.1 we obtain
+
+T(cid:7)
+
++ η
+2
+
+t=1
+
+(cid:9)vt(cid:9)2.
+
+( ft (w(t))− ft (w(cid:7))) ≤ T(cid:7)
+T(cid:7)
+
+t=1
+
+t=1
+
+(cid:7)vt ,w(t) − w(cid:7)(cid:8) ≤ (cid:9)w(cid:7)(cid:9)2
+T(cid:7)
+
+2η
+
++ ηβ
+
+t=1
+
+( ft (w(t))− ft (w(cid:7))) ≤ (cid:9)w(cid:7)(cid:9)2
+T(cid:7)
+T(cid:7)
+
+(cid:26)
+
+2η
+
+ft (w(t)) ≤ 1
+
+1− ηβ
+
+1
+T
+
+1
+T
+
+t=1
+
+t=1
+
+ft (w(t)).
+
+t=1
+
+(cid:27)
+
+.
+
+ft (w(cid:7))+ (cid:9)w(cid:7)(cid:9)2
+
+2η T
+
+Dividing by T and rearranging, we obtain
+
+Next, we take expectation of the two sides of the preceding equation with respect to
+z1, . . . , zT . Clearly, E[ ft (w(cid:7))] = LD(w(cid:7)). In addition, using the same argument as in
+the proof of Theorem 14.8 we have that
+
+(cid:13)
+
+E
+
+1
+T
+
+T(cid:7)
+
+t=1
+
+(cid:15)
+
+(cid:13)
+
+ft (w(t))
+
+= E
+
+1
+T
+
+T(cid:7)
+
+t=1
+
+(cid:15)
+
+LD(w(t))
+
+≥ E[LD( ¯w)].
+
+Combining all we conclude our proof.
+
+As a direct corollary we obtain:
+
+Corollary 14.14. Consider a convex-smooth-bounded learning problem with param-
+eters β, B. Assume in addition that (cid:9)(0, z) ≤ 1 for all z ∈ Z. For every (cid:2) > 0, set
+η =
+
+β(1+3/(cid:2)). Then, running SGD with T ≥ 12B2β/(cid:2)2 yields
+w∈H LD(w)+ (cid:2).
+
+E[LD( ¯w)] ≤ min
+
+1
+
+14.5.3 SGD for Regularized Loss Minimization
+We have shown that SGD enjoys the same worst-case sample complexity bound
+as regularized loss minimization. However, on some distributions, regularized loss
+minimization may yield a better solution. Therefore, in some cases we may want
+to solve the optimization problem associated with regularized loss minimization,
+namely,1
+
+(cid:20)
+
+(cid:21)
+(cid:9)w(cid:9)2 + L S(w)
+
+min
+w
+
+λ
+2
+
+.
+
+(14.14)
+
+Since we are dealing with convex learning problems in which the loss function is
+convex, the preceding problem is also a convex optimization problem that can be
+solved using SGD as well, as we shall see in this section.
+
+1 We divided λ by 2 for convenience.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:49:51, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.015
+
+14.6 Summary
+
+165
+
+Deﬁne f (w) = λ
+
+(cid:9)w(cid:9)2 + L S(w). Note that f
+
+2
+
+is a λ-strongly convex function;
+therefore, we can apply the SGD variant given in Section 14.4.4 (with H = Rd).
+To apply this algorithm, we only need to ﬁnd a way to construct an unbiased esti-
+mate of a subgradient of f at w(t). This is easily done by noting that if we pick z
+uniformly at random from S, and choose vt ∈ ∂(cid:9)(w(t), z) then the expected value of
+λw(t) + vt is a subgradient of f at w(t).
+that H = Rd and therefore the projection step does not matter) as follows
+(cid:16)
+
+To analyze the resulting algorithm, we ﬁrst rewrite the update rule (assuming
+
+(cid:17)
+
+vt
+
+λw(t) + vt
+w(t) − 1
+λt
+
+(cid:20)
+(cid:21)
+w(t+1) = w(t) − 1
+λt
+1− 1
+=
+t
+= t − 1
+(cid:20)
+w(t) − 1
+vt
+λt
+= t − 1
+t − 2
+w(t−1) −
+t − 1
+t(cid:7)
+
+t
+
+t
+= − 1
+λt
+
+vi.
+
+i=1
+
+(cid:21)
+
+− 1
+λt
+
+vt
+
+1
+
+λ(t − 1)
+
+vt−1
+
+(14.15)
+
+If we assume that the loss function is ρ-Lipschitz, it follows that for all t we have
+(cid:9)vt(cid:9) ≤ ρ and therefore (cid:9)λw(t)(cid:9) ≤ ρ, which yields
+
+(cid:9)λw(t) + vt(cid:9) ≤ 2ρ.
+
+Theorem 14.11 therefore tells us that after performing T iterations we have that
+
+E[ f ( ¯w)]− f (w(cid:7)) ≤ 4ρ2
+λ T
+
+(1+ log(T )).
+
+14.6 SUMMARY
+We have introduced the Gradient Descent and Stochastic Gradient Descent algo-
+rithms, along with several of their variants. We have analyzed their convergence rate
+and calculated the number of iterations that would guarantee an expected objective
+of at most (cid:2) plus the optimal objective. Most importantly, we have shown that by
+using SGD we can directly minimize the risk function. We do so by sampling a
+point i.i.d from D and using a subgradient of the loss of the current hypothesis w(t)
+at this point as an unbiased estimate of the gradient (or a subgradient) of the risk
+function. This implies that a bound on the number of iterations also yields a sam-
+ple complexity bound. Finally, we have also shown how to apply the SGD method
+to the problem of regularized risk minimization. In future chapters we show how
+this yields extremely simple solvers to some optimization problems associated with
+regularized risk minimization.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:49:51, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.015
+
+166
+
+Stochastic Gradient Descent
+
+14.7 BIBLIOGRAPHIC REMARKS
+SGD dates back to Robbins and Monro (1951). It is especially effective in large scale
+machine learning problems. See, for example, (Murata 1998, Le Cun 2004, Zhang
+2004, Bottou & Bousquet 2008, Shalev-Shwartz, Singer & Srebro 2007, Shalev-
+Shwartz & Srebro 2008). In the optimization community it was studied in the context
+of stochastic optimization. See, for example, (Nemirovski & Yudin 1978, Nesterov &
+Nesterov 2004, Nesterov 2005, Nemirovski, Juditsky, Lan & Shapiro 2009, Shapiro,
+Dentcheva & Ruszczy ´nski 2009).
+
+The bound we have derived for strongly convex function is due to Hazan,
+Agarwal, and Kale (2007). As mentioned previously, improved bounds have been
+obtained in Rakhlin, Shamir & Sridharan (2012).
+
+14.8 EXERCISES
+14.1 Prove Claim 14.10. Hint: Extend the proof of Lemma 13.5.
+14.2 Prove Corollary 14.14.
+14.3 Perceptron as a subgradient descent algorithm: Let S = ((x1, y1), . . . ,(xm , ym)) ∈
+(Rd ×{±1})m. Assume that there exists w ∈ Rd such that for every i ∈ [m] we have
+yi(cid:7)w,xi(cid:8) ≥ 1, and let w(cid:7) be a vector that has the minimal norm among all vectors
+that satisfy the preceding requirement. Let R = maxi (cid:9)xi(cid:9). Deﬁne a function
+
+f (w) = max
+i∈[m]
+
+(1− yi (cid:7)w,xi(cid:8)) .
+
+separates the examples in S.
+
+(cid:2) Show that minw:(cid:9)w(cid:9)≤(cid:9)w(cid:7)(cid:9) f (w) = 0 and show that any w for which f (w) < 1
+(cid:2) Show how to calculate a subgradient of f .
+(cid:2) Describe and analyze the subgradient descent algorithm for this case. Com-
+pare the algorithm and the analysis to the Batch Perceptron algorithm given in
+Section 9.1.2.
+step size, ηt = B
+√
+t .
+
+14.4 Variable step size (*): Prove an analog of Theorem 14.8 for SGD with a variable
+
+ρ
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:49:51, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.015
+
+

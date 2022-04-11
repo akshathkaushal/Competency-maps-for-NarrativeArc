@@ -1,0 +1,980 @@
+20
+
+Neural Networks
+
+An artiﬁcial neural network is a model of computation inspired by the structure of
+neural networks in the brain. In simpliﬁed models of the brain, it consists of a large
+number of basic computing devices (neurons) that are connected to each other in
+a complex communication network, through which the brain is able to carry out
+highly complex computations. Artiﬁcial neural networks are formal computation
+constructs that are modeled after this computation paradigm.
+
+Learning with neural networks was proposed in the mid-20th century. It yields
+an effective learning paradigm and has recently been shown to achieve cutting-edge
+performance on several learning tasks.
+
+A neural network can be described as a directed graph whose nodes correspond
+to neurons and edges correspond to links between them. Each neuron receives as
+input a weighted sum of the outputs of the neurons connected to its incoming edges.
+We focus on feedforward networks in which the underlying graph does not contain
+cycles.
+
+In the context of learning, we can deﬁne a hypothesis class consisting of neural
+network predictors, where all the hypotheses share the underlying graph structure
+of the network and differ in the weights over edges. As we will show in Section 20.3,
+every predictor over n variables that can be implemented in time T (n) can also be
+expressed as a neural network predictor of size O(T (n)2), where the size of the net-
+work is the number of nodes in it. It follows that the family of hypothesis classes
+of neural networks of polynomial size can sufﬁce for all practical learning tasks, in
+which our goal is to learn predictors which can be implemented efﬁciently. Fur-
+thermore, in Section 20.4 we will show that the sample complexity of learning such
+hypothesis classes is also bounded in terms of the size of the network. Hence, it
+seems that this is the ultimate learning paradigm we would want to adapt, in the
+sense that it both has a polynomial sample complexity and has the minimal approx-
+imation error among all hypothesis classes consisting of efﬁciently implementable
+predictors.
+
+The caveat is that the problem of training such hypothesis classes of neural net-
+work predictors is computationally hard. This will be formalized in Section 20.5.
+
+228
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 07 May 2018 at 13:46:06, subject to the Cambridge Core terms of use, available
+at https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.021
+
+20.1 Feedforward Neural Networks
+
+229
+
+A widely used heuristic for training neural networks relies on the SGD frame-
+work we studied in Chapter 14. There, we have shown that SGD is a successful
+learner if the loss function is convex. In neural networks, the loss function is highly
+nonconvex. Nevertheless, we can still implement the SGD algorithm and hope it will
+ﬁnd a reasonable solution (as happens to be the case in several practical tasks). In
+Section 20.6 we describe how to implement SGD for neural networks. In particular,
+the most complicated operation is the calculation of the gradient of the loss func-
+tion with respect to the parameters of the network. We present the backpropagation
+algorithm that efﬁciently calculates the gradient.
+
+20.1 FEEDFORWARD NEURAL NETWORKS
+The idea behind neural networks is that many neurons can be joined together by
+communication links to carry out complex computations. It is common to describe
+the structure of a neural network as a graph whose nodes are the neurons and each
+(directed) edge in the graph links the output of some neuron to the input of another
+neuron. We will restrict our attention to feedforward network structures in which
+the underlying graph does not contain cycles.
+A feedforward neural network is described by a directed acyclic graph, G =
+(V, E), and a weight function over the edges, w : E → R. Nodes of the graph cor-
+respond to neurons. Each single neuron is modeled as a simple scalar function,
+σ : R → R. We will focus on three possible functions for σ : the sign function, σ (a) =
+sign(a), the threshold function, σ (a) = 1[a>0], and the sigmoid function, σ (a) =
+1/(1 + exp( − a)), which is a smooth approximation to the threshold function. We
+call σ the “activation” function of the neuron. Each edge in the graph links the
+output of some neuron to the input of another neuron. The input of a neuron is
+obtained by taking a weighted sum of the outputs of all the neurons connected to it,
+where the weighting is according to w.
+
+To simplify the description of the calculation performed by the network, we
+further assume that the network is organized in layers. That is, the set of nodes can
+be decomposed into a union of (nonempty) disjoint subsets, V = ·∪T
+t=0Vt , such that
+every edge in E connects some node in Vt−1 to some node in Vt , for some t ∈ [T ].
+The bottom layer, V0, is called the input layer. It contains n + 1 neurons, where n is
+the dimensionality of the input space. For every i ∈ [n], the output of neuron i in V0
+is simply xi. The last neuron in V0 is the “constant” neuron, which always outputs 1.
+We denote by vt ,i the ith neuron of the tth layer and by ot ,i(x) the output of vt ,i when
+the network is fed with the input vector x. Therefore, for i ∈ [n] we have o0,i (x) = xi
+and for i = n+ 1 we have o0,i (x) = 1. We now proceed with the calculation in a layer
+by layer manner. Suppose we have calculated the outputs of the neurons at layer t.
+Then, we can calculate the outputs of the neurons at layer t + 1 as follows. Fix some
+vt+1, j ∈ Vt+1. Let at+1, j(x) denote the input to vt+1, j when the network is fed with
+the input vector x. Then,
+
+(cid:7)
+
+at+1, j(x) =
+
+and
+
+w((vt ,r , vt+1, j ))ot ,r (x),
+
+r:(vt,r ,vt+1, j )∈E
+ot+1, j (x) = σ
+
+(cid:3)
+
+(cid:4)
+
+at+1, j(x)
+
+.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 07 May 2018 at 13:46:06, subject to the Cambridge Core terms of use, available
+at https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.021
+
+230
+
+Neural Networks
+
+That is, the input to vt+1, j is a weighted sum of the outputs of the neurons in Vt that
+are connected to vt+1, j , where weighting is according to w, and the output of vt+1, j
+is simply the application of the activation function σ on its input.
+
+Layers V1, . . . , VT−1 are often called hidden layers. The top layer, VT , is called
+the output layer. In simple prediction problems the output layer contains a single
+neuron whose output is the output of the network.
+We refer to T as the number of layers in the network (excluding V0), or the
+“depth” of the network. The size of the network is |V|. The “width” of the network
+is maxt |Vt|. An illustration of a layered feedforward neural network of depth 2, size
+10, and width 5, is given in the following. Note that there is a neuron in the hidden
+layer that has no incoming edges. This neuron will output the constant σ (0).
+
+Input
+
+Layer
+
+(V0)
+
+v0,1
+
+v0,2
+
+v0,3
+
+v0,4
+
+x1
+
+x2
+
+x3
+
+Constant
+
+Hidden
+
+Output
+
+Layer
+
+(V2)
+
+v2,1
+
+Output
+
+Layer
+
+(V1)
+v1,1
+
+v1,2
+
+v1,3
+
+v1,4
+
+v1,5
+
+20.2 LEARNING NEURAL NETWORKS
+Once we have speciﬁed a neural network by (V , E, σ, w), we obtain a function
+hV ,E,σ,w : R|V0|−1 → R|VT|
+. Any set of such functions can serve as a hypothesis class
+for learning. Usually, we deﬁne a hypothesis class of neural network predictors by
+ﬁxing the graph (V , E) as well as the activation function σ and letting the hypothesis
+class be all functions of the form hV ,E,σ,w for some w : E → R. The triplet (V , E, σ )
+is often called the architecture of the network. We denote the hypothesis class by
+
+HV ,E,σ = {hV ,E,σ,w : w is a mapping from E to R}.
+
+(20.1)
+
+That is, the parameters specifying a hypothesis in the hypothesis class are the
+weights over the edges of the network.
+
+We can now study the approximation error, estimation error, and optimization
+error of such hypothesis classes. In Section 20.3 we study the approximation error
+of HV ,E,σ by studying what type of functions hypotheses in HV ,E,σ can implement,
+in terms of the size of the underlying graph. In Section 20.4 we study the estimation
+error of HV ,E,σ , for the case of binary classiﬁcation (i.e., VT = 1 and σ is the sign
+function), by analyzing its VC dimension. Finally, in Section 20.5 we show that it
+is computationally hard to learn the class HV ,E,σ , even if the underlying graph is
+small, and in Section 20.6 we present the most commonly used heuristic for training
+HV ,E,σ .
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 07 May 2018 at 13:46:06, subject to the Cambridge Core terms of use, available
+at https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.021
+
+20.3 The Expressive Power of Neural Networks
+
+231
+
+20.3 THE EXPRESSIVE POWER OF NEURAL NETWORKS
+In this section we study the expressive power of neural networks, namely, what type
+of functions can be implemented using a neural network. More concretely, we will
+ﬁx some architecture, V , E, σ , and will study what functions hypotheses in HV ,E,σ
+can implement, as a function of the size of V .
+We start the discussion with studying which type of Boolean functions (i.e.,
+functions from {±1}n to {±1}) can be implemented by HV ,E,sign. Observe that for
+every computer in which real numbers are stored using b bits, whenever we cal-
+culate a function f : Rn → R on such a computer we in fact calculate a function
+g : {±1}nb → {±1}b. Therefore, studying which Boolean functions can be imple-
+mented by HV ,E,sign can tell us which functions can be implemented on a computer
+that stores real numbers using b bits.
+
+We begin with a simple claim, showing that without restricting the size of the
+network, every Boolean function can be implemented using a neural network of
+depth 2.
+Claim 20.1. For every n, there exists a graph (V, E) of depth 2, such that HV ,E,sign
+contains all functions from {±1}n to {±1}.
+Proof. We construct a graph with |V0|= n+1,|V1|= 2n+1, and |V2|= 1. Let E be all
+possible edges between adjacent layers. Now, let f :{±1}n → {±1} be some Boolean
+function. We need to show that we can adjust the weights so that the network will
+implement f . Let u1, . . . ,uk be all vectors in {±1}n on which f outputs 1. Observe
+that for every i and every x ∈ {±1}n, if x (cid:18)= ui then (cid:7)x,ui(cid:8) ≤ n − 2 and if x = ui then
+(cid:7)x,ui(cid:8) = n. It follows that the function gi(x) = sign((cid:7)x,ui(cid:8) − n + 1) equals 1 if and
+only if x = ui . It follows that we can adapt the weights between V0 and V1 so that for
+every i ∈ [k], the neuron v1,i implements the function gi(x). Next, we observe that
+f (x) is the disjunction of the functions gi(x), and therefore can be written as
+
+f (x) = sign
+
+which concludes our proof.
+
+(cid:27)
+
+gi(x)+ k − 1
+
+,
+
+(cid:26)
+
+k(cid:7)
+
+i=1
+
+The preceding claim shows that neural networks can implement any Boolean
+function. However, this is a very weak property, as the size of the resulting network
+might be exponentially large. In the construction given at the proof of Claim 20.1,
+the number of nodes in the hidden layer is exponentially large. This is not an artifact
+of our proof, as stated in the following theorem.
+
+Theorem 20.2. For every n, let s(n) be the minimal integer such that there exists a
+graph (V , E) with |V| = s(n) such that the hypothesis class HV ,E,sign contains all the
+functions from {0,1}n to {0,1}. Then, s(n) is exponential in n. Similar results hold for
+HV ,E,σ where σ is the sigmoid function.
+Proof. Suppose that for some (V , E) we have that HV ,E,sign contains all functions
+from {0,1}n to {0,1}. It follows that it can shatter the set of m = 2n vectors in {0,1}n
+and hence the VC dimension of HV ,E,sign is 2n. On the other hand, the VC dimen-
+sion of HV ,E,sign is bounded by O(|E|log (|E|)) ≤ O(|V|3), as we will show in the
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 07 May 2018 at 13:46:06, subject to the Cambridge Core terms of use, available
+at https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.021
+
+232
+
+Neural Networks
+next section. This implies that |V| ≥ (cid:6)(2n/3), which concludes our proof for the
+case of networks with the sign activation function. The proof for the sigmoid case is
+analogous.
+Remark 20.1. It is possible to derive a similar theorem for HV ,E,σ for any σ , as long
+as we restrict the weights so that it is possible to express every weight using a number
+of bits which is bounded by a universal constant. We can even consider hypothesis
+classes where different neurons can employ different activation functions, as long as
+the number of allowed activation functions is also ﬁnite.
+
+Which functions can we express using a network of polynomial size? The pre-
+ceding claim tells us that it is impossible to express all Boolean functions using a
+network of polynomial size. On the positive side, in the following we show that all
+Boolean functions that can be calculated in time O(T (n)) can also be expressed by
+a network of size O(T (n)2).
+Theorem 20.3. Let T : N → N and for every n, let Fn be the set of functions that can
+be implemented using a Turing machine using runtime of at most T (n). Then, there
+exist constants b,c ∈ R+ such that for every n, there is a graph (Vn, En) of size at most
+c T (n)2 + b such that HVn ,En ,sign contains Fn.
+
+The proof of this theorem relies on the relation between the time complexity
+of programs and their circuit complexity (see, for example, Sipser (2006)). In a
+nutshell, a Boolean circuit is a type of network in which the individual neurons
+implement conjunctions, disjunctions, and negation of their inputs. Circuit com-
+plexity measures the size of Boolean circuits required to calculate functions. The
+relation between time complexity and circuit complexity can be seen intuitively as
+follows. We can model each step of the execution of a computer program as a simple
+operation on its memory state. Therefore, the neurons at each layer of the network
+will reﬂect the memory state of the computer at the corresponding time, and the
+translation to the next layer of the network involves a simple calculation that can
+be carried out by the network. To relate Boolean circuits to networks with the sign
+activation function, we need to show that we can implement the operations of con-
+junction, disjunction, and negation, using the sign activation function. Clearly, we
+can implement the negation operator using the sign activation function. The follow-
+ing lemma shows that the sign activation function can also implement conjunctions
+and disjunctions of its inputs.
+
+Lemma 20.4. Suppose that a neuron v, that implements the sign activation function,
+has k incoming edges, connecting it to neurons whose outputs are in {±1}. Then, by
+adding one more edge, linking a “constant” neuron to v, and by adjusting the weights
+on the edges to v, the output of v can implement the conjunction or the disjunction of
+its inputs.
+Proof. Simply observe that if f : {±1}k → {±1} is the conjunction function, f (x) =
+∧i xi, then it can be written as f (x) = sign
+. Similarly, the disjunc-
+tion function, f (x) = ∨i xi, can be written as f (x) = sign
+
+(cid:17)
+(cid:16)
+k − 1+(cid:2)
+
+1− k +(cid:2)
+
+k
+i=1 xi
+
+(cid:16)
+
+(cid:17)
+
+.
+
+k
+i=1 xi
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 07 May 2018 at 13:46:06, subject to the Cambridge Core terms of use, available
+at https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.021
+
+20.3 The Expressive Power of Neural Networks
+
+233
+
+So far we have discussed Boolean functions. In Exercise 20.1 we show that neural
+networks are universal approximators. That is, for every ﬁxed precision parameter,
+(cid:2) > 0, and every Lipschitz function f : [− 1,1]n → [− 1,1], it is possible to construct
+a network such that for every input x ∈ [ − 1,1]n, the network outputs a number
+between f (x) − (cid:2) and f (x) + (cid:2). However, as in the case of Boolean functions, the
+size of the network here again cannot be polynomial in n. This is formalized in the
+following theorem, whose proof is a direct corollary of Theorem 20.2 and is left as
+an exercise.
+Theorem 20.5. Fix some (cid:2) ∈ (0,1). For every n, let s(n) be the minimal integer such
+that there exists a graph (V , E) with |V| = s(n) such that the hypothesis class HV ,E,σ ,
+with σ being the sigmoid function, can approximate, to within precision of (cid:2), every
+1-Lipschitz function f : [− 1,1]n → [− 1,1]. Then s(n) is exponential in n.
+
+20.3.1 Geometric Intuition
+We next provide several geometric illustrations of functions f : R2 →{±1} and show
+how to express them using a neural network with the sign activation function.
+
+Let us start with a depth 2 network, namely, a network with a single hidden layer.
+Each neuron in the hidden layer implements a halfspace predictor. Then, the single
+neuron at the output layer applies a halfspace on top of the binary outputs of the
+neurons in the hidden layer. As we have shown before, a halfspace can implement
+the conjunction function. Therefore, such networks contain all hypotheses which are
+an intersection of k − 1 halfspaces, where k is the number of neurons in the hidden
+layer; namely, they can express all convex polytopes with k − 1 faces. An example
+of an intersection of 5 halfspaces is given in the following.
+
+We have shown that a neuron in layer V2 can implement a function that indicates
+whether x is in some convex polytope. By adding one more layer, and letting the
+neuron in the output layer implement the disjunction of its inputs, we get a network
+that computes the union of polytopes. An illustration of such a function is given in
+the following.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 07 May 2018 at 13:46:06, subject to the Cambridge Core terms of use, available
+at https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.021
+
+234
+
+Neural Networks
+
+20.4 THE SAMPLE COMPLEXITY OF NEURAL NETWORKS
+Next we discuss the sample complexity of learning the class HV ,E,σ . Recall that the
+fundamental theorem of learning tells us that the sample complexity of learning a
+hypothesis class of binary classiﬁers depends on its VC dimension. Therefore, we
+focus on calculating the VC dimension of hypothesis classes of the form HV ,E,σ ,
+where the output layer of the graph contains a single neuron.
+We start with the sign activation function, namely, with HV ,E,sign. What is the VC
+dimension of this class? Intuitively, since we learn |E| parameters, the VC dimen-
+sion should be order of |E|. This is indeed the case, as formalized by the following
+theorem.
+Theorem 20.6. The VC dimension of HV ,E,sign is O(|E|log(|E|)).
+Proof. To simplify the notation throughout the proof, let us denote the hypothesis
+class by H. Recall the deﬁnition of the growth function, τH(m), from Section 6.5.1.
+This function measures maxC⊂X :|C|=m |HC|, where HC is the restriction of H to func-
+tions from C to {0,1}. We can naturally extend the deﬁnition for a set of functions
+from X to some ﬁnite set Y, by letting HC be the restriction of H to functions from
+C to Y, and keeping the deﬁnition of τH(m) intact.
+Our neural network is deﬁned by a layered graph. Let V0, . . . , VT be the layers
+of the graph. Fix some t ∈ [T ]. By assigning different weights on the edges between
+Vt−1 and Vt, we obtain different functions from R|Vt−1| → {±1}|Vt|
+. Let H(t) be the
+class of all possible such mappings from R|Vt−1| → {±1}|Vt|
+. Then, H can be written
+as a composition, H = H(T ) ◦ . . . ◦ H(1). In Exercise 20.4 we show that the growth
+function of a composition of hypothesis classes is bounded by the products of the
+growth functions of the individual classes. Therefore,
+
+τH(m) ≤ T(cid:8)
+
+t=1
+
+τH(t)(m).
+
+In addition, each H(t) can be written as a product of function classes, H(t) = H(t ,1) ×
+··· ×H(t ,|Vt|), where each H(t , j) is all functions from layer t − 1 to {±1} that the jth
+neuron of layer t can implement. In Exercise 20.3 we bound product classes, and
+this yields
+
+|Vt|(cid:8)
+
+τH(t)(m) ≤
+
+τH(t,i) (m).
+
+i=1
+
+Let dt ,i be the number of edges that are headed to the ith neuron of layer t.
+Since the neuron is a homogenous halfspace hypothesis and the VC dimension of
+homogenous halfspaces is the dimension of their input, we have by Sauer’s lemma
+that
+
+(cid:16)
+
+(cid:17)dt,i ≤ (em)dt,i .
+
+τH(t,i) (m) ≤
+
+em
+dt,i
+
+Overall, we obtained that
+
+(cid:2)
+τH(m) ≤ (em)
+
+t,i dt,i = (em)
+|E|
+
+.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 07 May 2018 at 13:46:06, subject to the Cambridge Core terms of use, available
+at https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.021
+
+20.5 The Runtime of Learning Neural Networks
+Now, assume that there are m shattered points. Then, we must have τH(m) = 2m,
+from which we obtain
+
+235
+
+2m ≤ (em)
+
+|E| ⇒ m ≤ |E|log(em)/log(2).
+
+The claim follows by Lemma A.2.
+
+Next, we consider HV ,E,σ , where σ is the sigmoid function. Surprisingly, it turns
+out that the VC dimension of HV ,E,σ is lower bounded by (cid:6)(|E|2) (see Exercise
+20.5.) That is, the VC dimension is the number of tunable parameters squared. It
+is also possible to upper bound the VC dimension by O(|V|2|E|2), but the proof
+is beyond the scope of this book. In any case, since in practice we only consider
+networks in which the weights have a short representation as ﬂoating point numbers
+with O(1) bits, by using the discretization trick we easily obtain that such networks
+have a VC dimension of O(|E|), even if we use the sigmoid activation function.
+
+20.5 THE RUNTIME OF LEARNING NEURAL NETWORKS
+In the previous sections we have shown that the class of neural networks with an
+underlying graph of polynomial size can express all functions that can be imple-
+mented efﬁciently, and that the sample complexity has a favorable dependence on
+the size of the network. In this section we turn to the analysis of the time complexity
+of training neural networks.
+We ﬁrst show that it is NP hard to implement the ERM rule with respect to
+HV ,E,sign even for networks with a single hidden layer that contain just 4 neurons in
+the hidden layer.
+Theorem 20.7. Let k ≥ 3. For every n, let (V , E) be a layered graph with n input
+nodes, k + 1 nodes at the (single) hidden layer, where one of them is the constant
+neuron, and a single output node. Then, it is NP hard to implement the ERM rule
+with respect to HV ,E,sign.
+
+The proof relies on a reduction from the k-coloring problem and is left as
+
+Exercise 20.6.
+One way around the preceding hardness result could be that for the purpose of
+learning, it may sufﬁce to ﬁnd a predictor h ∈ H with low empirical error, not neces-
+sarily an exact ERM. However, it turns out that even the task of ﬁnding weights that
+result in close-to-minimal empirical error is computationally infeasible (see (Bartlett
+& Ben-David 2002)).
+
+One may also wonder whether it may be possible to change the architecture
+of the network so as to circumvent the hardness result. That is, maybe ERM
+with respect to the original network structure is computationally hard but ERM
+with respect to some other, larger, network may be implemented efﬁciently (see
+Chapter 8 for examples of such cases). Another possibility is to use other activation
+functions (such as sigmoids, or any other type of efﬁciently computable activation
+functions). There is a strong indication that all of such approaches are doomed to
+fail. Indeed, under some cryptographic assumption, the problem of learning inter-
+sections of halfspaces is known to be hard even in the representation independent
+model of learning (see Klivans & Sherstov (2006)). This implies that, under the
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 07 May 2018 at 13:46:06, subject to the Cambridge Core terms of use, available
+at https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.021
+
+236
+
+Neural Networks
+
+same cryptographic assumption, any hypothesis class which contains intersections
+of halfspaces cannot be learned efﬁciently.
+
+A widely used heuristic for training neural networks relies on the SGD frame-
+work we studied in Chapter 14. There, we have shown that SGD is a successful
+learner if the loss function is convex. In neural networks, the loss function is highly
+nonconvex. Nevertheless, we can still implement the SGD algorithm and hope
+it will ﬁnd a reasonable solution (as happens to be the case in several practical
+tasks).
+
+20.6 SGD AND BACKPROPAGATION
+The problem of ﬁnding a hypothesis in HV ,E,σ with a low risk amounts to the prob-
+lem of tuning the weights over the edges. In this section we show how to apply a
+heuristic search for good weights using the SGD algorithm. Throughout this section
+we assume that σ is the sigmoid function, σ (a) = 1/(1 + e
+−a), but the derivation
+holds for any differentiable scalar function.
+Since E is a ﬁnite set, we can think of the weight function as a vector w ∈ R|E|
+.
+Suppose the network has n input neurons and k output neurons, and denote by
+hw : Rn → Rk the function calculated by the network if the weight function is deﬁned
+by w. Let us denote by (cid:23)(hw(x),y) the loss of predicting hw(x) when the target
+is y ∈ Y. For concreteness, we will take (cid:23) to be the squared loss, (cid:23)(hw(x), y) =
+(cid:9)hw(x)− y(cid:9)2; however, similar derivation can be obtained for every differentiable
+function. Finally, given a distribution D over the examples domain, Rn × Rk, let
+LD(w) be the risk of the network, namely,
+LD(w) = E
+
+1
+2
+
+(x,y)∼D [(cid:23)(hw(x),y)] .
+
+Recall the SGD algorithm for minimizing the risk function LD(w). We repeat
+the pseudocode from Chapter 14 with a few modiﬁcations, which are relevant to the
+neural network application because of the nonconvexity of the objective function.
+First, while in Chapter 14 we initialized w to be the zero vector, here we initialize w
+to be a randomly chosen vector with values close to zero. This is because an initial-
+ization with the zero vector will lead all hidden neurons to have the same weights
+(if the network is a full layered network). In addition, the hope is that if we repeat
+the SGD procedure several times, where each time we initialize the process with
+a new random vector, one of the runs will lead to a good local minimum. Second,
+while a ﬁxed step size, η, is guaranteed to be good enough for convex problems,
+here we utilize a variable step size, ηt , as deﬁned in Section 14.4.2. Because of the
+nonconvexity of the loss function, the choice of the sequence ηt is more signiﬁcant,
+and it is tuned in practice by a trial and error manner. Third, we output the best
+performing vector on a validation set. In addition, it is sometimes helpful to add reg-
+ularization on the weights, with parameter λ. That is, we try to minimize LD(w) +
+(cid:9)w(cid:9)2. Finally, the gradient does not have a closed form solution. Instead, it is
+λ
+2
+implemented using the backpropagation algorithm, which will be described in the
+sequel.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 07 May 2018 at 13:46:06, subject to the Cambridge Core terms of use, available
+at https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.021
+
+20.6 SGD and Backpropagation
+
+237
+
+SGD for Neural Networks
+
+parameters:
+
+number of iterations τ
+step size sequence η1, η2, . . . , ητ
+regularization parameter λ > 0
+
+at random
+
+input:
+layered graph (V , E)
+differentiable activation function σ : R → R
+initialize:
+choose w(1) ∈ R|E|
+(from a distribution s.t. w(1) is close enough to 0)
+for i = 1,2, . . . , τ
+sample (x,y) ∼ D
+calculate gradient vi = backpropagation(x,y,w,(V , E), σ )
+update w(i+1) = w(i) − ηi(vi + λw(i))
+output:
+¯w is the best performing w(i) on a validation set
+
+Backpropagation
+
+input:
+example (x,y), weight vector w, layered graph (V , E),
+activation function σ : R → R
+initialize:
+denote layers of the graph V0, . . . , VT where Vt = {vt ,1, . . . , vt ,kt
+deﬁne Wt ,i , j as the weight of (vt , j , vt+1,i )
+(where we set Wt ,i , j = 0 if (vt , j , vt+1,i ) /∈ E)
+forward:
+set o0 = x
+for t = 1, . . . , T
+for i = 1, . . . ,kt
+set ot ,i = σ (at ,i )
+
+set at ,i =(cid:2)kt−1
+
+j=1 Wt−1,i , j ot−1, j
+
+}
+
+backward:
+set δT = oT − y
+for t = T − 1, T − 2, . . . ,1
+for i = 1, . . . ,kt
+
+δt ,i =(cid:2)kt+1
+
+j=1 Wt , j ,i δt+1, j σ(cid:3)
+output:
+foreach edge (vt−1, j , vt ,i ) ∈ E
+set the partial derivative to δt ,i σ(cid:3)
+
+(at+1, j )
+
+(at ,i)ot−1, j
+
+Explaining How Backpropagation Calculates the Gradient:
+We next explain how the backpropagation algorithm calculates the gradient of the
+loss function on an example (x,y) with respect to the vector w. Let us ﬁrst recall
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 07 May 2018 at 13:46:06, subject to the Cambridge Core terms of use, available
+at https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.021
+
+238
+
+Neural Networks
+
+a few deﬁnitions from vector calculus. Each element of the gradient is the partial
+derivative with respect to the variable in w corresponding to one of the edges of the
+network. Recall the deﬁnition of a partial derivative. Given a function f : Rn → R,
+the partial derivative with respect to the ith variable at w is obtained by ﬁxing the
+values of w1, . . . , wi−1, wi+1, wn, which yields the scalar function g : R → R deﬁned
+by g(a) = f ((w1, . . . , wi−1, wi + a, wi+1, . . . , wn)), and then taking the derivative of g
+at 0. For a function with multiple outputs, f : Rn → Rm, the Jacobian of f at w ∈ Rn,
+denoted Jw(f), is the m × n matrix whose i , j element is the partial derivative of fi :
+Rn → R w.r.t. its jth variable at w. Note that if m = 1 then the Jacobian matrix is the
+gradient of the function (represented as a row vector). Two examples of Jacobian
+calculations, which we will later use, are as follows.
+(cid:2) Let f(w) = Aw for A ∈ Rm,n. Then Jw(f) = A.
+(cid:2) For every n, we use the notation σ to denote the function from Rn to Rn which
+applies the sigmoid function element-wise. That is, α = σ (θ) means that for
+every i we have αi = σ (θi ) =
+1+exp(−θi ) . It is easy to verify that Jθ (σ ) is a diago-
+nal matrix whose (i ,i) entry is σ(cid:3)
+is the derivative function of the
+(scalar) sigmoid function, namely, σ(cid:3)
+(1+exp(θi ))(1+exp(−θi )) . We also use the
+notation diag(σ (cid:3)
+The chain rule for taking the derivative of a composition of functions can be
+written in terms of the Jacobian as follows. Given two functions f : Rn → Rm and
+g : Rk → Rn, we have that the Jacobian of the composition function, (f◦g) : Rk → Rm,
+at w, is
+
+(θi ) =
+(θ)) to denote this matrix.
+
+(θi ), where σ(cid:3)
+
+1
+
+1
+
+For example, for g(w) = Aw, where A ∈ Rn,k, we have that
+
+Jw(f◦ g) = Jg(w)(f)Jw(g).
+
+Jw(σ ◦ g) = diag(σ (cid:3)
+
+(Aw)) A.
+
+t=0Vt. For every t, let us write Vt = {vt ,1, . . . , vt ,kt
+
+To describe the backpropagation algorithm, let us ﬁrst decompose V into the
+layers of the graph, V = ·∪T
+}, where
+kt =|Vt|. In addition, for every t denote Wt ∈ Rkt+1,kt a matrix which gives a weight to
+every potential edge between Vt and Vt+1. If the edge exists in E then we set Wt ,i , j to
+be the weight, according to w, of the edge (vt , j , vt+1,i ). Otherwise, we add a “phan-
+tom” edge and set its weight to be zero, Wt ,i , j = 0. Since when calculating the partial
+derivative with respect to the weight of some edge we ﬁx all other weights, these
+additional “phantom” edges have no effect on the partial derivative with respect
+to existing edges. It follows that we can assume, without loss of generality, that all
+edges exist, that is, E = ∪t (Vt × Vt+1).
+Next, we discuss how to calculate the partial derivatives with respect to the edges
+from Vt−1 to Vt, namely, with respect to the elements in Wt−1. Since we ﬁx all other
+weights of the network, it follows that the outputs of all the neurons in Vt−1 are ﬁxed
+numbers which do not depend on the weights in Wt−1. Denote the corresponding
+vector by ot−1. In addition, let us denote by (cid:9)t : Rkt → R the loss function of the
+subnetwork deﬁned by layers Vt , . . . , VT as a function of the outputs of the neurons
+in Vt . The input to the neurons of Vt can be written as at = Wt−1ot−1 and the output
+of the neurons of Vt is ot = σ (at ). That is, for every j we have ot , j = σ (at , j ). We
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 07 May 2018 at 13:46:06, subject to the Cambridge Core terms of use, available
+at https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.021
+
+20.6 SGD and Backpropagation
+
+239
+
+obtain that the loss, as a function of Wt−1, can be written as
+
+gt(Wt−1) = (cid:9)t (ot ) = (cid:9)t (σ (at )) = (cid:9)t(σ (Wt−1ot−1)).
+
+It would be convenient to rewrite this as follows. Let wt−1 ∈ Rkt−1kt be the column
+vector obtained by concatenating the rows of Wt−1 and then taking the transpose of
+the resulting long vector. Deﬁne by Ot−1 the kt × (kt−1kt) matrix
+
+⎛
+⎜⎜⎜⎜⎜⎝
+
+o(cid:12)
+t−1
+0
+...
+0
+
+⎞
+⎟⎟⎟⎟⎟⎠.
+
+0
+o(cid:12)
+t−1
+...
+0
+
+···
+0
+···
+0
+...
+...
+··· o
+(cid:12)
+t−1
+
+Ot−1 =
+
+(20.2)
+
+Then, Wt−1ot−1 = Ot−1wt−1, so we can also write
+
+gt(wt−1) = (cid:9)t (σ (Ot−1 wt−1)).
+
+Therefore, applying the chain rule, we obtain that
+Jwt−1(gt) = Jσ (Ot−1wt−1)((cid:9)t )diag(σ(cid:3)
+
+(Ot−1wt−1)) Ot−1.
+
+Using our notation we have ot = σ (Ot−1wt−1) and at = Ot−1wt−1, which yields
+
+Jwt−1(gt) = Jot ((cid:9)t )diag(σ(cid:3)
+
+(at)) Ot−1.
+
+Jwt−1(gt) =(cid:3)
+
+Let us also denote δt = Jot ((cid:9)t ). Then, we can further rewrite the preceding as
+
+δt ,1 σ(cid:3)
+
+(cid:12)
+t−1
+(at ,1)o
+
+σ(cid:3)
+
+(cid:12)
+t−1
+(at ,kt )o
+
+, . . . , δt ,kt
+
+(20.3)
+It is left to calculate the vector δt = Jot ((cid:9)t ) for every t. This is the gradient of (cid:9)t
+at ot . We calculate this in a recursive manner. First observe that for the last layer
+we have that (cid:9)T (u) = (cid:23)(u,y), where (cid:23) is the loss function. Since we assume that
+(cid:9)u − y(cid:9)2 we obtain that Ju((cid:9)T ) = (u − y). In particular, δT = JoT ((cid:9)T ) =
+(cid:23)(u,y) = 1
+(oT − y). Next, note that
+
+2
+
+.
+
+(cid:4)
+
+(cid:9)t (u) = (cid:9)t+1(σ (Wtu)).
+
+Therefore, by the chain rule,
+
+Ju((cid:9)t ) = Jσ (Wt u)((cid:9)t+1)diag(σ(cid:3)
+
+(Wtu))Wt .
+
+In particular,
+
+δt = Jot ((cid:9)t ) = Jσ (Wt ot )((cid:9)t+1)diag(σ(cid:3)
+= Jot+1((cid:9)t+1)diag(σ(cid:3)
+= δt+1 diag(σ (cid:3)
+
+(at+1))Wt .
+
+(at+1))Wt
+
+(Wt ot ))Wt
+
+In summary, we can ﬁrst calculate the vectors {at ,ot} from the bottom of the
+network to its top. Then, we calculate the vectors {δt} from the top of the network
+back to its bottom. Once we have all of these vectors, the partial derivatives are
+easily obtained using Equation (20.3). We have thus shown that the pseudocode of
+backpropagation indeed calculates the gradient.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 07 May 2018 at 13:46:06, subject to the Cambridge Core terms of use, available
+at https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.021
+
+240
+
+Neural Networks
+
+(cid:22)
+
+20.7 SUMMARY
+Neural networks over graphs of size s(n) can be used to describe hypothesis classes
+of all predictors that can be implemented in runtime of O(
+s(n)). We have also
+shown that their sample complexity depends polynomially on s(n) (speciﬁcally,
+it depends on the number of edges in the network). Therefore, classes of neu-
+ral network hypotheses seem to be an excellent choice. Regrettably, the problem
+of training the network on the basis of training data is computationally hard. We
+have presented the SGD framework as a heuristic approach for training neural net-
+works and described the backpropagation algorithm which efﬁciently calculates the
+gradient of the loss function with respect to the weights over the edges.
+
+20.8 BIBLIOGRAPHIC REMARKS
+Neural networks were extensively studied in the 1980s and early 1990s, but with
+mixed empirical success. In recent years, a combination of algorithmic advance-
+ments, as well as increasing computational power and data size, has led to a
+breakthrough in the effectiveness of neural networks. In particular, “deep net-
+works” (i.e., networks of more than 2 layers) have shown very impressive practical
+performance on a variety of domains. A few examples include convolutional net-
+works (LeCun & Bengio 1995), restricted Boltzmann machines (Hinton, Osindero
+& Teh 2006), auto-encoders (Ranzato et al. 2007, Bengio & LeCun 2007, Collobert
+& Weston 2008, Lee et al. 2009, Le et al. 2012), and sum-product networks (Livni,
+Shalev-Shwartz & Shamir 2013, Poon & Domingos 2011). See also (Bengio 2009)
+and the references therein.
+
+The expressive power of neural networks and the relation to circuit complexity
+have been extensively studied in (Parberry 1994). For the analysis of the sample
+complexity of neural networks we refer the reader to (Anthony & Bartlet 1999).
+Our proof technique of Theorem 20.6 is due to Kakade and Tewari lecture notes.
+Klivans and Sherstov (2006) have shown that for any c > 0, intersections of
+nc halfspaces over {±1}n are not efﬁciently PAC learnable, even if we allow rep-
+resentation independent learning. This hardness result relies on the cryptographic
+assumption that there is no polynomial time solution to the unique-shortest-vector
+problem. As we have argued, this implies that there cannot be an efﬁcient algorithm
+for training neural networks, even if we allow larger networks or other activation
+functions that can be implemented efﬁciently.
+
+The backpropagation algorithm has been introduced in Rumelhart, Hinton, and
+
+Williams (1986).
+
+20.9 EXERCISES
+20.1 Neural Networks are universal approximators: Let f : [ − 1,1]n → [ − 1,1] be a
+ρ-Lipschitz function. Fix some (cid:2) > 0. Construct a neural network N : [ − 1,1]n →
+[ − 1,1], with the sigmoid activation function, such that for every x ∈ [ − 1,1]n it
+holds that | f (x)− N(x)| ≤ (cid:2).
+Hint: Similarly to the proof of Theorem 19.3, partition [ − 1,1]n into small boxes.
+Use the Lipschitzness of f to show that it is approximately constant at each box.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 07 May 2018 at 13:46:06, subject to the Cambridge Core terms of use, available
+at https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.021
+
+Finally, show that a neural network can ﬁrst decide which box the input vector
+belongs to, and then predict the averaged value of f at that box.
+
+20.9 Exercises
+
+241
+
+20.2 Prove Theorem 20.5.
+: {−1,1}n → {−1,1} construct a 1-Lipschitz function g :
+Hint: For every f
+[− 1,1]n → [− 1,1] such that if you can approximate g then you can express f .
+20.3 Growth function of product: For i = 1,2, let Fi be a set of functions from X to Yi .
+Deﬁne H = F1 × F2 to be the Cartesian product class. That is, for every f1 ∈ F1
+and f2 ∈ F2, there exists h ∈ H such that h(x) = ( f1(x), f2(x)). Prove that τH(m) ≤
+τF1(m) τF2(m).
+20.4 Growth function of composition: Let F1 be a set of functions from X to Z and let
+F2 be a set of functions from Z to Y. Let H = F2 ◦F1 be the composition class. That
+is, for every f1 ∈ F1 and f2 ∈ F2, there exists h ∈ H such that h(x) = f2( f1(x)). Prove
+that τH(m) ≤ τF2(m)τF1(m).
+20.5 VC of sigmoidal networks: In this exercise we show that there is a graph (V , E)
+such that the VC dimension of the class of neural networks over these graphs with
+the sigmoid activation function is (cid:6)(|E|2). Note that for every (cid:2) > 0, the sigmoid
+i xi ], up
+activation function can approximate the threshold activation function, 1[
+to accuracy (cid:2). To simplify the presentation, throughout the exercise we assume
+i xi >0] using a sigmoid
+that we can exactly implement the activation function 1[
+activation function.
+Fix some n.
+1. Construct a network, N1, with O(n) weights, which implements a function from
+R to {0,1}n and satisﬁes the following property. For every x ∈ {0,1}n, if we feed
+the network with the real number 0. x1x2 . . . xn, then the output of the network
+will be x.
+Hint: Denote α = 0. x1x2 . . . xn and observe that 10k α− 0. 5 is at least 0. 5 if xk = 1
+and is at most −0. 3 if xk = −1.
+2. Construct a network, N2, with O(n) weights, which implements a function from
+[n] to {0,1}n such that N2(i) = ei for all i. That is, upon receiving the input i, the
+network outputs the vector of all zeros except 1 at the i’th neuron.
+
+(cid:2)
+
+(cid:2)
+
+3. Let α1, . . . , αn be n real numbers such that every αi is of the form 0. a(i)
+
+. . .a(i)
+n ,
+∈{0,1}. Construct a network, N3, with O(n) weights, which implements
+
+with a(i)
+a function from [n] to R, and satisﬁes N2(i) = αi for every i ∈ [n].
+j
+
+4. Combine N1, N3 to obtain a network that receives i ∈ [n] and output a(i).
+5. Construct a network N4 that receives (i , j) ∈ [n]× [n] and outputs a(i)
+.
+
+Hint: Observe that the AND function over {0,1}2 can be calculated using O(1)
+weights.
+
+1 a(i)
+2
+
+j
+
+6. Conclude that there is a graph with O(n) weights such that the VC dimension
+
+of the resulting hypothesis class is n2.
+
+20.6 Prove Theorem 20.7.
+
+Hint: The proof is similar to the hardness of learning intersections of halfspaces –
+see Exercise 32 in Chapter 8.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 07 May 2018 at 13:46:06, subject to the Cambridge Core terms of use, available
+at https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.021
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 07 May 2018 at 13:46:06, subject to the Cambridge Core terms of use, available
+at https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.021
+
+

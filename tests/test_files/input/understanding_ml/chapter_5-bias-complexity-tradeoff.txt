@@ -1,0 +1,572 @@
+5
+
+The Bias-Complexity Trade-off
+
+In Chapter 2 we saw that unless one is careful, the training data can mislead the
+learner, and result in overﬁtting. To overcome this problem, we restricted the search
+space to some hypothesis class H. Such a hypothesis class can be viewed as reﬂecting
+some prior knowledge that the learner has about the task – a belief that one of
+the members of the class H is a low-error model for the task. For example, in our
+papayas taste problem, on the basis of our previous experience with other fruits,
+we may assume that some rectangle in the color-hardness plane predicts (at least
+approximately) the papaya’s tastiness.
+
+Is such prior knowledge really necessary for the success of learning? Maybe
+there exists some kind of universal learner, that is, a learner who has no prior knowl-
+edge about a certain task and is ready to be challenged by any task? Let us elaborate
+on this point. A speciﬁc learning task is deﬁned by an unknown distribution D over
+X × Y, where the goal of the learner is to ﬁnd a predictor h : X → Y, whose risk,
+LD(h), is small enough. The question is therefore whether there exist a learning
+algorithm A and a training set size m, such that for every distribution D, if A receives
+m i.i.d. examples from D, there is a high chance it outputs a predictor h that has a
+low risk.
+
+The ﬁrst part of this chapter addresses this question formally. The No-Free-
+Lunch theorem states that no such universal learner exists. To be more precise, the
+theorem states that for binary classiﬁcation prediction tasks, for every learner there
+exists a distribution on which it fails. We say that the learner fails if, upon receiving
+i.i.d. examples from that distribution, its output hypothesis is likely to have a large
+risk, say, ≥ 0.3, whereas for the same distribution, there exists another learner that
+will output a hypothesis with a small risk. In other words, the theorem states that no
+learner can succeed on all learnable tasks – every learner has tasks on which it fails
+while other learners succeed.
+Therefore, when approaching a particular learning problem, deﬁned by some
+distribution D, we should have some prior knowledge on D. One type of such prior
+knowledge is that D comes from some speciﬁc parametric family of distributions.
+We will study learning under such assumptions later on in Chapter 24. Another type
+of prior knowledge on D, which we assumed when deﬁning the PAC learning model,
+
+36
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:39:31, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.006
+
+37
+
+5.1 The No-Free-Lunch Theorem
+is that there exists h in some predeﬁned hypothesis class H, such that LD(h) = 0. A
+softer type of prior knowledge on D is assuming that minh∈H LD(h) is small. In a
+sense, this weaker assumption on D is a prerequisite for using the agnostic PAC
+model, in which we require that the risk of the output hypothesis will not be much
+larger than minh∈H LD(h).
+
+In the second part of this chapter we study the beneﬁts and pitfalls of using a
+hypothesis class as a means of formalizing prior knowledge. We decompose the
+error of an ERM algorithm over a class H into two components. The ﬁrst compo-
+nent reﬂects the quality of our prior knowledge, measured by the minimal risk of a
+hypothesis in our hypothesis class, minh∈H LD(h). This component is also called the
+approximation error, or the bias of the algorithm toward choosing a hypothesis from
+H. The second component is the error due to overﬁtting, which depends on the size
+or the complexity of the class H and is called the estimation error. These two terms
+imply a tradeoff between choosing a more complex H (which can decrease the bias
+but increases the risk of overﬁtting) or a less complex H (which might increase the
+bias but decreases the potential overﬁtting).
+
+5.1 THE NO-FREE-LUNCH THEOREM
+In this part we prove that there is no universal learner. We do this by showing that
+no learner can succeed on all learning tasks, as formalized in the following theorem:
+
+Theorem 5.1. (No-Free-Lunch) Let A be any learning algorithm for the task of
+binary classiﬁcation with respect to the 0−1 loss over a domain X . Let m be any num-
+ber smaller than |X|/2, representing a training set size. Then, there exists a distribution
+D over X ×{0,1} such that:
+
+1. There exists a function f : X → {0,1} with LD( f ) = 0.
+2. With probability of at least 1/7 over the choice of S ∼ Dm we have that
+
+LD(A(S)) ≥ 1/8.
+
+This theorem states that for every learner, there exists a task on which it fails,
+even though that task can be successfully learned by another learner. Indeed, a
+trivial successful learner in this case would be an ERM learner with the hypoth-
+esis class H = { f }, or more generally, ERM with respect to any ﬁnite hypothesis
+class that contains f and whose size satisﬁes the equation m ≥ 8log(7|H|/6) (see
+Corollary 2.3).
+Proof. Let C be a subset of X of size 2m. The intuition of the proof is that any
+learning algorithm that observes only half of the instances in C has no information
+on what should be the labels of the rest of the instances in C. Therefore, there exists
+a “reality,” that is, some target function f , that would contradict the labels that A(S)
+predicts on the unobserved instances in C.
+Note that there are T = 22m possible functions from C to {0,1}. Denote these
+functions by f1, . . . , fT . For each such function, let Di be a distribution over C×{0,1}
+deﬁned by
+
+(cid:5)
+
+Di ({(x , y)}) =
+
+1/|C|
+0
+
+if y = fi (x)
+otherwise.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:39:31, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.006
+
+38
+
+The Bias-Complexity Trade-off
+That is, the probability to choose a pair (x , y) is 1/|C| if the label y is indeed the true
+label according to fi , and the probability is 0 if y (cid:18)= fi (x). Clearly, LDi ( fi ) = 0.
+examples from C ×{0,1} and returns a function A(S) : C → {0,1}, it holds that
+
+We will show that for every algorithm, A, that receives a training set of m
+
+max
+i∈[T ]
+
+E
+S∼Dm
+
+i
+
+[LDi (A(S))] ≥ 1/4.
+
+(5.1)
+
+Clearly, this means that for every algorithm, A
+, that receives a training set of m
+examples from X × {0,1} there exist a function f : X → {0,1} and a distribution D
+over X ×{0,1}, such that LD( f ) = 0 and
+
+(cid:3)
+
+[LD(A
+
+(cid:3)
+
+(S))] ≥ 1/4.
+
+E
+S∼Dm
+
+(5.2)
+
+It is easy to verify that the preceding sufﬁces for showing that P[LD(A
+1/7, which is what we need to prove (see Exercise 5.1).
+
+(S)) ≥ 1/8]≥
+We now turn to proving that Equation (5.1) holds. There are k = (2m)m possible
+sequences of m examples from C. Denote these sequences by S1, . . . , Sk. Also, if
+S j = (x1, . . . , xm) we denote by Si
+j the sequence containing the instances in S j labeled
+= ((x1, fi (x1)), . . . ,(xm , fi (xm))). If the distribution is
+by the function fi , namely, Si
+j
+Di then the possible training sets A can receive are Si
+, . . . , Si
+k, and all these training
+sets have the same probability of being sampled. Therefore,
+
+1
+
+(cid:3)
+
+[LDi (A(S))] = 1
+k
+
+E
+S∼Dm
+
+i
+
+LDi (A(Si
+
+j )).
+
+(5.3)
+
+Using the facts that “maximum” is larger than “average” and that “average” is larger
+than “minimum,” we have
+
+k(cid:7)
+
+j=1
+
+max
+i∈[T ]
+
+1
+k
+
+LDi (A(Si
+
+j )) ≥ 1
+T
+
+LDi (A(Si
+
+j ))
+
+LDi (A(Si
+
+j ))
+
+LDi (A(Si
+
+j )).
+
+(5.4)
+
+k(cid:7)
+
+j=1
+
+T(cid:7)
+k(cid:7)
+
+i=1
+
+1
+k
+
+j=1
+
+k(cid:7)
+T(cid:7)
+T(cid:7)
+
+i=1
+
+1
+T
+
+i=1
+
+= 1
+k
+
+j=1
+≥ min
+j∈[k]
+
+1
+T
+
+Next, ﬁx some j ∈ [k]. Denote S j = (x1, . . . , xm) and let v1, . . . , v p be the examples in
+C that do not appear in S j . Clearly, p ≥ m. Therefore, for every function h : C →
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:39:31, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.006
+
+5.1 The No-Free-Lunch Theorem
+
+39
+
+1[h(x)(cid:18)= fi (x)]
+
+1[h(vr )(cid:18)= fi (vr )]
+
+1[h(vr )(cid:18)= fi (vr )].
+
+(5.5)
+
+{0,1} and every i we have
+
+LDi (h) = 1
+2m
+
+≥ 1
+2m
+
+≥ 1
+2 p
+
+x∈C
+
+(cid:7)
+p(cid:7)
+p(cid:7)
+
+r=1
+
+Hence,
+
+T(cid:7)
+
+i=1
+
+1
+T
+
+LDi (A(Si
+
+j )) ≥ 1
+T
+
+r=1
+
+T(cid:7)
+p(cid:7)
+
+i=1
+
+r=1
+
+p(cid:7)
+T(cid:7)
+T(cid:7)
+
+i=1
+
+1
+
+1
+2 p
+
+1
+T
+
+= 1
+2 p
+
+≥ 1
+2
+
+r=1
+· min
+r∈[p]
+
+1
+T
+
+1
+
+[A(Si
+
+j )(vr )(cid:18)= fi (vr )]
+
+[A(Si
+
+j )(vr )(cid:18)= fi (vr )]
+
+(5.6)
+Next, ﬁx some r ∈ [ p]. We can partition all the functions in f1, . . . , fT into T /2 dis-
+joint pairs, where for a pair ( fi , fi(cid:3)) we have that for every c ∈ C, fi (c) (cid:18)= fi(cid:3)(c) if and
+only if c = vr . Since for such a pair we must have Si
+
+j )(vr )(cid:18)= fi (vr )].
+
+i=1
+
+[A(Si
+
+1
+
+j
+
+= Si
+j )(vr )(cid:18)= fi(cid:3) (vr )]
+
+(cid:3)
+j , it follows that
+= 1,
+
++ 1
+
+[A(Si(cid:3)
+
+which yields
+
+1
+
+[A(Si
+
+j )(vr )(cid:18)= fi (vr )]
+T(cid:7)
+
+1
+T
+
+i=1
+
+1
+
+[A(Si
+
+j )(vr )(cid:18)= fi (vr )]
+
+= 1
+2
+
+.
+
+Combining this with Equation (5.6), Equation (5.4), and Equation (5.3), we obtain
+that Equation (5.1) holds, which concludes our proof.
+
+5.1.1 No-Free-Lunch and Prior Knowledge
+How does the No-Free-Lunch result relate to the need for prior knowledge? Let us
+consider an ERM predictor over the hypothesis class H of all the functions f from
+X to {0,1}. This class represents lack of prior knowledge: Every possible function
+from the domain to the label set is considered a good candidate. According to the
+No-Free-Lunch theorem, any algorithm that chooses its output from hypotheses in
+H, and in particular the ERM predictor, will fail on some learning task. Therefore,
+this class is not PAC learnable, as formalized in the following corollary:
+Corollary 5.2. Let X be an inﬁnite domain set and let H be the set of all functions
+from X to {0,1}. Then, H is not PAC learnable.
+Proof. Assume, by way of contradiction, that the class is learnable. Choose some
+(cid:14) < 1/8 and δ < 1/7. By the deﬁnition of PAC learnability, there must be some
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:39:31, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.006
+
+40
+
+The Bias-Complexity Trade-off
+learning algorithm A and an integer m = m((cid:14), δ), such that for any data-generating
+distribution over X ×{0,1}, if for some function f :X → {0,1}, LD( f ) = 0, then with
+probability greater than 1 − δ when A is applied to samples S of size m, generated
+i.i.d. by D, LD(A(S)) ≤ (cid:14). However, applying the No-Free-Lunch theorem, since
+|X| > 2m, for every learning algorithm (and in particular for the algorithm A), there
+exists a distribution D such that with probability greater than 1/7 > δ, LD(A(S)) >
+1/8 > (cid:14), which leads to the desired contradiction.
+
+How can we prevent such failures? We can escape the hazards foreseen by the
+No-Free-Lunch theorem by using our prior knowledge about a speciﬁc learning
+task, to avoid the distributions that will cause us to fail when learning that task.
+Such prior knowledge can be expressed by restricting our hypothesis class.
+
+But how should we choose a good hypothesis class? On the one hand, we want
+to believe that this class includes the hypothesis that has no error at all (in the PAC
+setting), or at least that the smallest error achievable by a hypothesis from this class
+is indeed rather small (in the agnostic setting). On the other hand, we have just seen
+that we cannot simply choose the richest class – the class of all functions over the
+given domain. This tradeoff is discussed in the following section.
+
+5.2 ERROR DECOMPOSITION
+To answer this question we decompose the error of an ERMH predictor into two
+components as follows. Let h S be an ERMH hypothesis. Then, we can write
+(cid:14)est = LD(h S)− (cid:14)app.
+
+LD(h S) = (cid:14)app + (cid:14)est where : (cid:14)app = min
+
+(5.7)
+
+h∈H LD(h),
+
+(cid:2) The Approximation Error – the minimum risk achievable by a predictor in
+the hypothesis class. This term measures how much risk we have because we
+restrict ourselves to a speciﬁc class, namely, how much inductive bias we have.
+The approximation error does not depend on the sample size and is determined
+by the hypothesis class chosen. Enlarging the hypothesis class can decrease the
+approximation error.
+
+agnostic case, however, the approximation error can be large.1
+
+Under the realizability assumption, the approximation error is zero. In the
+(cid:2) The Estimation Error – the difference between the approximation error and the
+error achieved by the ERM predictor. The estimation error results because the
+empirical risk (i.e., training error) is only an estimate of the true risk, and so
+the predictor minimizing the empirical risk is only an estimate of the predictor
+minimizing the true risk.
+
+The quality of this estimation depends on the training set size and on the size,
+or complexity, of the hypothesis class. As we have shown, for a ﬁnite hypothe-
+sis class, (cid:14)est increases (logarithmically) with |H| and decreases with m. We can
+
+1 In fact, it always includes the error of the Bayes optimal predictor (see Chapter 3), the minimal yet
+inevitable error, because of the possible nondeterminism of the world in this model. Sometimes in the
+literature the term approximation error refers not to minh∈H LD(h), but rather to the excess error over
+that of the Bayes optimal predictor, namely, minh∈H LD(h)− (cid:14)Bayes.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:39:31, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.006
+
+5.5 Exercises
+
+41
+
+think of the size of H as a measure of its complexity. In future chapters we will
+deﬁne other complexity measures of hypothesis classes.
+
+Since our goal is to minimize the total risk, we face a tradeoff, called the bias-
+complexity tradeoff. On one hand, choosing H to be a very rich class decreases the
+approximation error but at the same time might increase the estimation error, as a
+rich H might lead to overﬁtting. On the other hand, choosing H to be a very small
+set reduces the estimation error but might increase the approximation error or, in
+other words, might lead to underﬁtting. Of course, a great choice for H is the class
+that contains only one classiﬁer – the Bayes optimal classiﬁer. But the Bayes optimal
+classiﬁer depends on the underlying distribution D, which we do not know (indeed,
+learning would have been unnecessary had we known D).
+Learning theory studies how rich we can make H while still maintaining reason-
+able estimation error. In many cases, empirical research focuses on designing good
+hypothesis classes for a certain domain. Here, “good” means classes for which the
+approximation error would not be excessively high. The idea is that although we are
+not experts and do not know how to construct the optimal classiﬁer, we still have
+some prior knowledge of the speciﬁc problem at hand, which enables us to design
+hypothesis classes for which both the approximation error and the estimation error
+are not too large. Getting back to our papayas example, we do not know how exactly
+the color and hardness of a papaya predict its taste, but we do know that papaya is
+a fruit and on the basis of previous experience with other fruit we conjecture that a
+rectangle in the color-hardness space may be a good predictor.
+
+5.3 SUMMARY
+The No-Free-Lunch theorem states that there is no universal learner. Every learner
+has to be speciﬁed to some task, and use some prior knowledge about that task, in
+order to succeed. So far we have modeled our prior knowledge by restricting our
+output hypothesis to be a member of a chosen hypothesis class. When choosing
+this hypothesis class, we face a tradeoff, between a larger, or more complex, class
+that is more likely to have a small approximation error, and a more restricted class
+that would guarantee that the estimation error will be small. In the next chapter we
+will study in more detail the behavior of the estimation error. In Chapter 7 we will
+discuss alternative ways to express prior knowledge.
+
+5.4 BIBLIOGRAPHIC REMARKS
+(Wolpert & Macready 1997) proved several no-free-lunch theorems for optimiza-
+tion, but these are rather different from the theorem we prove here. The theorem
+we prove here is closely related to lower bounds in VC theory, as we will study in
+the next chapter.
+
+5.5 EXERCISES
+5.1 Prove that Equation (5.2) sufﬁces for showing that P[LD(A(S))≥ 1/8] ≥ 1/7.
+
+Hint: Let θ be a random variable that receives values in [0,1] and whose expectation
+satisﬁes E[θ] ≥ 1/4. Use Lemma B.1 to show that P[θ ≥ 1/8] ≥ 1/7.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:39:31, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.006
+
+42
+
+The Bias-Complexity Trade-off
+
+5.2 Assume you are asked to design a learning algorithm to predict whether patients
+are going to suffer a heart attack. Relevant patient features the algorithm may have
+access to include blood pressure (BP), body-mass index (BMI), age (A), level of
+physical activity (P), and income (I).
+
+choice.
+
+You have to choose between two algorithms; the ﬁrst picks an axis aligned rect-
+angle in the two dimensional space spanned by the features BP and BMI and the
+other picks an axis aligned rectangle in the ﬁve dimensional space spanned by all
+the preceding features.
+1. Explain the pros and cons of each choice.
+2. Explain how the number of available labeled training samples will affect your
+5.3 Prove that if |X| ≥ km for a positive integer k ≥ 2, then we can replace the lower
+bound of 1/4 in the No-Free-Lunch theorem with k−1
+2k . Namely, let A be a
+learning algorithm for the task of binary classiﬁcation. Let m be any number smaller
+than |X|/k, representing a training set size. Then, there exists a distribution D over
+X ×{0,1} such that:
+(cid:2) There exists a function f : X → {0,1} with LD( f ) = 0.
+(cid:2) ES∼Dm [LD(A(S))]≥ 1
+
+− 1
+
+= 1
+
+2k
+
+2
+
+− 1
+2k .
+
+2
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:39:31, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.006
+
+

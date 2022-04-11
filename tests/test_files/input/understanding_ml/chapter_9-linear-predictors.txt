@@ -1,0 +1,1012 @@
+9
+
+Linear Predictors
+
+In this chapter we will study the family of linear predictors, one of the most useful
+families of hypothesis classes. Many learning algorithms that are being widely used
+in practice rely on linear predictors, ﬁrst and foremost because of the ability to learn
+them efﬁciently in many cases. In addition, linear predictors are intuitive, are easy
+to interpret, and ﬁt the data reasonably well in many natural learning problems.
+
+We will
+
+introduce several hypothesis classes belonging to this family –
+halfspaces, linear regression predictors, and logistic regression predictors – and
+present relevant learning algorithms:
+linear programming and the Perceptron
+algorithm for the class of halfspaces and the Least Squares algorithm for linear
+regression. This chapter is focused on learning linear predictors using the ERM
+approach; however, in later chapters we will see alternative paradigms for learning
+these hypothesis classes.
+
+First, we deﬁne the class of afﬁne functions as
+
+where
+
+Ld = {hw,b : w ∈ Rd ,b ∈ R},
+(cid:27)
+
+(cid:26)
+
+hw,b(x) = (cid:7)w,x(cid:8)+ b =
+
+wi xi
+
++ b.
+
+d(cid:7)
+
+i=1
+
+It will be convenient also to use the notation
+
+Ld = {x (cid:29)→ (cid:7)w,x(cid:8)+ b : w ∈ Rd ,b ∈ R},
+
+which reads as follows: Ld is a set of functions, where each function is parameterized
+by w ∈ Rd and b ∈ R, and each such function takes as input a vector x and returns as
+output the scalar (cid:7)w,x(cid:8)+ b.
+The different hypothesis classes of linear predictors are compositions of a func-
+tion φ : R → Y on Ld. For example, in binary classiﬁcation, we can choose φ to be
+the sign function, and for regression problems, where Y = R, φ is simply the identity
+function.
+It may be more convenient to incorporate b, called the bias, into w as an extra
+coordinate and add an extra coordinate with a value of 1 to all x ∈ X ; namely,
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:44:25, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.010
+
+89
+
+90
+
+Linear Predictors
+let w(cid:3) = (b, w1, w2, . . . wd) ∈ Rd+1 and let x(cid:3) = (1, x1, x2, . . . , xd) ∈ Rd+1. Therefore,
+
+hw,b(x) = (cid:7)w,x(cid:8)+ b = (cid:7)w
+
+(cid:3),x
+
+(cid:3)(cid:8).
+
+It follows that each afﬁne function in Rd can be rewritten as a homogenous linear
+function in Rd+1 applied over the transformation that appends the constant 1 to
+each input vector. Therefore, whenever it simpliﬁes the presentation, we will omit
+the bias term and refer to Ld as the class of homogenous linear functions of the form
+hw(x) = (cid:7)w,x(cid:8).
+
+Throughout the book we often use the general term “linear functions” for both
+
+afﬁne functions and (homogenous) linear functions.
+
+9.1 HALFSPACES
+The ﬁrst hypothesis class we consider is the class of halfspaces, designed for binary
+classiﬁcation problems, namely, X = Rd and Y = {−1,+1}. The class of halfspaces is
+deﬁned as follows:
+
+H Sd = sign◦ Ld = {x (cid:29)→ sign(hw,b(x)) : hw,b ∈ Ld}.
+
+In other words, each halfspace hypothesis in H Sd is parameterized by w ∈ Rd and
+b ∈ R and upon receiving a vector x the hypothesis returns the label sign((cid:7)w,x(cid:8)+ b).
+To illustrate this hypothesis class geometrically, it is instructive to consider the
+case d = 2. Each hypothesis forms a hyperplane that is perpendicular to the vector
+w and intersects the vertical axis at the point (0,−b/w2). The instances that are
+“above” the hyperplane, that is, share an acute angle with w, are labeled positively.
+Instances that are “below” the hyperplane, that is, share an obtuse angle with w, are
+labeled negatively.
+
+w
+
++
+
++
+
+−
+
+−
+
+(cid:17)
+
+(cid:16)
+
+In Section 9.1.3 we will show that VCdim(H Sd) = d + 1. It follows that we
+can learn halfspaces using the ERM paradigm, as long as the sample size is
+d+log(1/δ)
+. Therefore, we now discuss how to implement an ERM procedure
+(cid:6)
+for halfspaces.
+
+(cid:2)
+
+We introduce in the following two solutions to ﬁnding an ERM halfspace in the
+realizable case. In the context of halfspaces, the realizable case is often referred to
+as the “separable” case, since it is possible to separate with a hyperplane all the
+positive examples from all the negative examples. Implementing the ERM rule in
+the nonseparable case (i.e., the agnostic case) is known to be computationally hard
+(Ben-David and Simon, 2001). There are several approaches to learning nonsepa-
+rable data. The most popular one is to use surrogate loss functions, namely, to learn
+a halfspace that does not necessarily minimize the empirical risk with the 0−1 loss,
+but rather with respect to a diffferent loss function. For example, in Section 9.3 we
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:44:25, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.010
+
+will describe the logistic regression approach, which can be implemented efﬁciently
+even in the nonseparable case. We will study surrogate loss functions in more detail
+later on in Chapter 12.
+
+9.1 Halfspaces
+
+91
+
+9.1.1 Linear Programming for the Class of Halfspaces
+Linear programs (LP) are problems that can be expressed as maximizing a linear
+function subject to linear inequalities. That is,
+(cid:7)u,w(cid:8)
+
+max
+w∈Rd
+subject to
+
+Aw ≥ v
+
+where w ∈ Rd is the vector of variables we wish to determine, A is an m × d matrix,
+and v ∈ Rm ,u ∈ Rd are vectors. Linear programs can be solved efﬁciently,1 and
+furthermore, there are publicly available implementations of LP solvers.
+
+We will show that the ERM problem for halfspaces in the realizable case can be
+expressed as a linear program. For simplicity, we assume the homogenous case. Let
+S = {(xi , yi )}m
+i=1 be a training set of size m. Since we assume the realizable case, an
+ERM predictor should have zero errors on the training set. That is, we are looking
+for some vector w ∈ Rd for which
+
+sign((cid:7)w,xi(cid:8)) = yi ,
+
+∀i = 1, . . . ,m.
+Equivalently, we are looking for some vector w for which
+∀i = 1, . . . ,m.
+
+yi(cid:7)w,xi(cid:8) > 0,
+
+Let w∗
+be a vector that satisﬁes this condition (it must exist since we assume real-
+izability). Deﬁne γ = mini (yi(cid:7)w∗,xi(cid:8)) and let ¯w = w
+∗
+γ . Therefore, for all i we
+have
+∗,xi(cid:8) ≥ 1.
+
+yi(cid:7) ¯w, xi(cid:8) = 1
+
+yi(cid:7)w
+
+γ
+
+We have thus shown that there exists a vector that satisﬁes
+∀i = 1, . . . ,m.
+
+yi(cid:7)w,xi(cid:8) ≥ 1,
+
+(9.1)
+
+And clearly, such a vector is an ERM predictor.
+To ﬁnd a vector that satisﬁes Equation (9.1) we can rely on an LP solver as
+follows. Set A to be the m × d matrix whose rows are the instances multiplied by yi.
+That is, Ai , j = yi xi , j , where xi , j is the j’th element of the vector xi. Let v be the
+vector (1, . . . ,1) ∈ Rm. Then, Equation (9.1) can be rewritten as
+
+Aw ≥ v.
+
+The LP form requires a maximization objective, yet all the w that satisfy the
+constraints are equal candidates as output hypotheses. Thus, we set a “dummy”
+objective, u = (0, . . . ,0) ∈ Rd.
+
+1 Namely, in time polynomial in m, d, and in the representation size of real numbers.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:44:25, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.010
+
+92
+
+Linear Predictors
+
+9.1.2 Perceptron for Halfspaces
+A different implementation of the ERM rule is the Perceptron algorithm of Rosen-
+blatt (Rosenblatt 1958). The Perceptron is an iterative algorithm that constructs a
+sequence of vectors w(1),w(2), . . .. Initially, w(1) is set to be the all-zeros vector. At
+iteration t, the Perceptron ﬁnds an example i that is mislabeled by w(t), namely, an
+example for which sign((cid:7)w(t),xi(cid:8)) (cid:18)= yi. Then, the Perceptron updates w(t) by adding
+to it the instance xi scaled by the label yi. That is, w(t+1) = w(t) + yixi . Recall that
+our goal is to have yi(cid:7)w,xi(cid:8) > 0 for all i and note that
+
+yi(cid:7)w(t+1),xi(cid:8) = yi(cid:7)w(t) + yixi ,xi(cid:8) = yi(cid:7)w(t),xi(cid:8)+(cid:9)xi(cid:9)2.
+
+Hence, the update of the Perceptron guides the solution to be “more correct” on
+the i’th example.
+
+Batch Perceptron
+
+input: A training set (x1, y1), . . . ,(xm , ym)
+initialize: w(1) = (0, . . . ,0)
+for t = 1,2, . . .
+if (∃ i s.t. yi(cid:7)w(t),xi(cid:8) ≤ 0) then
+w(t+1) = w(t) + yixi
+else
+
+output w(t)
+
+The following theorem guarantees that in the realizable case, the algorithm stops
+
+with all sample points correctly classiﬁed.
+Theorem 9.1. Assume that (x1, y1), . . . ,(xm , ym) is separable, let B = min{(cid:9)w(cid:9) : ∀i ∈
+[m], yi(cid:7)w,xi(cid:8) ≥ 1}, and let R = maxi (cid:9)xi(cid:9). Then, the Perceptron algorithm stops after
+at most (R B)2 iterations, and when it stops it holds that ∀i ∈ [m], yi(cid:7)w(t),xi(cid:8) > 0.
+Proof. By the deﬁnition of the stopping condition, if the Perceptron stops it must
+have separated all the examples. We will show that if the Perceptron runs for T
+iterations, then we must have T ≤ (R B)2, which implies the Perceptron must stop
+after at most (R B)2 iterations.
+Let w(cid:7) be a vector that achieves the minimum in the deﬁnition of B. That is,
+yi(cid:7)w(cid:7), xi(cid:8) ≥ 1 for all i, and among all vectors that satisfy these constraints, w(cid:7) is of
+minimal norm.
+the angle between w(cid:7) and w(T+1) is at least
+(cid:7)w(cid:7),w(T+1)(cid:8)
+(cid:9)w(cid:7)(cid:9)(cid:9)w(T +1)(cid:9) ≥
+
+The idea of the proof is to show that after performing T iterations, the cosine of
+
+√
+T
+R B . That is, we will show that
+
+T
+R B
+
+(9.2)
+
+√
+
+.
+
+By the Cauchy-Schwartz inequality, the left-hand side of Equation (9.2) is at most
+1. Therefore, Equation (9.2) would imply that
+
+1 ≥
+
+which will conclude our proof.
+
+√
+
+T
+R B
+
+⇒ T ≤ (R B)2,
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:44:25, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.010
+
+9.1 Halfspaces
+To show that Equation (9.2) holds, we ﬁrst show that (cid:7)w(cid:7),w(T+1)(cid:8) ≥ T . Indeed,
+at the ﬁrst iteration, w(1) = (0, . . . ,0) and therefore (cid:7)w(cid:7),w(1)(cid:8) = 0, while on iteration
+t, if we update using example (xi , yi ) we have that
+
+93
+
+(cid:7)w(cid:7),w(t+1)(cid:8)−(cid:7)w(cid:7),w(t)(cid:8) = (cid:7)w(cid:7),w(t+1) − w(t)(cid:8)
+
+= (cid:7)w(cid:7), yixi(cid:8) = yi(cid:7)w(cid:7),xi(cid:8)
+≥ 1.
+
+Therefore, after performing T iterations, we get
+
+(cid:7)w(cid:7),w(T+1)(cid:8) = T(cid:7)
+
+(cid:16)
+(cid:17)
+(cid:7)w(cid:7),w(t+1)(cid:8)−(cid:7)w(cid:7),w(t)(cid:8)
+
+t=1
+
+≥ T ,
+
+(9.3)
+
+as required.
+
+Next, we upper bound (cid:9)w(T+1)(cid:9). For each iteration t we have that
+
+(cid:9)w(t+1)(cid:9)2 = (cid:9)w(t) + yixi(cid:9)2
+
+= (cid:9)w(t)(cid:9)2 + 2yi(cid:7)w(t),xi(cid:8)+ y2
+≤ (cid:9)w(t)(cid:9)2 + R2
+
+i
+
+(cid:9)xi(cid:9)2
+
+(9.4)
+
+where the last inequality is due to the fact that example i is necessarily such that
+yi(cid:7)w(t),xi(cid:8) ≤ 0, and the norm of xi is at most R. Now, since (cid:9)w(1)(cid:9)2 = 0, if we use
+Equation (9.4) recursively for T iterations, we obtain that
+√
+
+(9.5)
+Combining Equation (9.3) with Equation (9.5), and using the fact that (cid:9)w(cid:7)(cid:9) = B, we
+obtain that
+
+T R.
+
+(cid:9)w(T+1)(cid:9)2 ≤ TR2 ⇒ (cid:9)w(T+1)(cid:9) ≤
+
+(cid:7)w(T+1),w(cid:7)(cid:8)
+(cid:9)w(cid:7)(cid:9)(cid:9)w(T+1)(cid:9) ≥
+
+√
+T
+T R
+
+B
+
+=
+
+T
+BR
+
+.
+
+√
+
+We have thus shown that Equation (9.2) holds, and this concludes our proof.
+
+Remark 9.1. The Perceptron is simple to implement and is guaranteed to converge.
+However, the convergence rate depends on the parameter B, which in some sit-
+uations might be exponentially large in d. In such cases, it would be better to
+implement the ERM problem by solving a linear program, as described in the pre-
+vious section. Nevertheless, for many natural data sets, the size of B is not too large,
+and the Perceptron converges quite fast.
+
+9.1.3 The VC Dimension of Halfspaces
+To compute the VC dimension of halfspaces, we start with the homogenous case.
+
+Theorem 9.2. The VC dimension of the class of homogenous halfspaces in Rd is d.
+
+Proof. First, consider the set of vectors e1, . . . ,ed, where for every i the vector ei is
+the all zeros vector except 1 in the i’th coordinate. This set is shattered by the class
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:44:25, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.010
+
+94
+
+Linear Predictors
+of homogenous halfspaces. Indeed, for every labeling y1, . . . , yd, set w = (y1, . . . , yd),
+and then (cid:7)w,ei(cid:8) = yi for all i.
+Next, let x1, . . . ,xd+1 be a set of d + 1 vectors in Rd. Then, there must exist
+d+1
+i=1 aixi = 0. Let
+real numbers a1, . . . ,ad+1, not all of them are zero, such that
+I = {i : ai > 0} and J = { j : a j < 0}. Either I or J is nonempty. Let us ﬁrst assume
+that both of them are nonempty. Then,(cid:7)
+aixi =
+
+|a j|x j .
+
+(cid:7)
+
+(cid:2)
+
+i∈I
+
+j∈J
+
+Now, suppose that x1, . . . ,xd+1 are shattered by the class of homogenous classes.
+Then, there must exist a vector w such that (cid:7)w,xi(cid:8) > 0 for all i ∈ I while (cid:7)w,x j(cid:8) < 0
+for every j ∈ J . It follows that
+
+"(cid:7)
+
+i∈I
+
+#
+
+"(cid:7)
+
+j∈J
+
+#
+
+(cid:7)
+
+j∈J
+
+ai(cid:7)xi ,w(cid:8) =
+
+aixi ,w
+
+=
+
+|a j|x j ,w
+
+=
+
+|a j|(cid:7)x j ,w(cid:8) < 0,
+
+(cid:7)
+
+0 <
+
+i∈I
+
+which leads to a contradiction. Finally, if J (respectively, I ) is empty then the right-
+most (respectively, left-most) inequality should be replaced by an equality, which
+still leads to a contradiction.
+
+Theorem 9.3. The VC dimension of the class of nonhomogenous halfspaces in Rd is
+d + 1.
+Proof. First, as in the proof of Theorem 9.2, it is easy to verify that the set of vectors
+0,e1, . . . ,ed is shattered by the class of nonhomogenous halfspaces. Second, suppose
+that the vectors x1, . . . ,xd+2 are shattered by the class of nonhomogenous halfspaces.
+But, using the reduction we have shown in the beginning of this chapter, it follows
+that there are d + 2 vectors in Rd+1 that are shattered by the class of homogenous
+halfspaces. But this contradicts Theorem 9.2.
+
+9.2 LINEAR REGRESSION
+Linear regression is a common statistical tool for modeling the relationship between
+some “explanatory” variables and some real valued outcome. Cast as a learning
+problem, the domain set X is a subset of Rd, for some d, and the label set Y is the
+set of real numbers. We would like to learn a linear function h : Rd → R that best
+approximates the relationship between our variables (say, for example, predicting
+the weight of a baby as a function of her age and weight at birth). Figure 9.1 shows
+an example of a linear regression predictor for d = 1.
+
+The hypothesis class of linear regression predictors is simply the set of linear
+
+functions,
+
+Hreg = Ld = {x (cid:29)→ (cid:7)w,x(cid:8)+ b : w ∈ Rd , b ∈ R}.
+
+Next we need to deﬁne a loss function for regression. While in classiﬁcation
+the deﬁnition of the loss is straightforward, as (cid:9)(h,(x, y)) simply indicates whether
+h(x) correctly predicts y or not, in regression, if the baby’s weight is 3 kg, both the
+predictions 3.00001 kg and 4 kg are “wrong,” but we would clearly prefer the former
+over the latter. We therefore need to deﬁne how much we shall be “penalized” for
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:44:25, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.010
+
+9.2 Linear Regression
+
+95
+
+Figure 9.1. Linear regression for d = 1. For instance, the x-axis may denote the age of the
+baby, and the y-axis her weight.
+
+the discrepancy between h(x) and y. One common way is to use the squared-loss
+function, namely,
+
+(cid:9)(h,(x, y)) = (h(x)− y)2.
+
+For this loss function, the empirical risk function is called the Mean Squared Error,
+namely,
+
+m(cid:7)
+
+i=1
+
+L S(h) = 1
+m
+
+(h(xi )− yi)2.
+
+In the next subsection, we will see how to implement the ERM rule for lin-
+ear regression with respect to the squared loss. Of course, there are a variety of
+other loss functions that one can use, for example, the absolute value loss function,
+(cid:9)(h,(x, y)) = |h(x) − y|. The ERM rule for the absolute value loss function can be
+implemented using linear programming (see Exercise 9.1).
+
+Note that since linear regression is not a binary prediction task, we cannot ana-
+lyze its sample complexity using the VC-dimension. One possible analysis of the
+sample complexity of linear regression is by relying on the “discretization trick”
+(see Remark 4.1 in Chapter 4); namely, if we are happy with a representation of
+each element of the vector w and the bias b using a ﬁnite number of bits (say a 64
+bits ﬂoating point representation), then the hypothesis class becomes ﬁnite and its
+size is at most 264(d+1). We can now rely on sample complexity bounds for ﬁnite
+hypothesis classes as described in Chapter 4. Note, however, that to apply the sam-
+ple complexity bounds from Chapter 4 we also need that the loss function will be
+bounded. Later in the book we will describe more rigorous means to analyze the
+sample complexity of regression problems.
+
+9.2.1 Least Squares
+Least squares is the algorithm that solves the ERM problem for the hypothesis class
+of linear regression predictors with respect to the squared loss. The ERM problem
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:44:25, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.010
+
+96
+
+Linear Predictors
+
+with respect to this class, given a training set S, and using the homogenous version
+of Ld, is to ﬁnd
+
+argmin
+
+w
+
+L S(hw) = argmin
+
+w
+
+1
+m
+
+((cid:7)w,xi(cid:8)− yi)2.
+
+m(cid:7)
+
+i=1
+
+To solve the problem we calculate the gradient of the objective function and
+compare it to zero. That is, we need to solve
+
+We can rewrite the problem as the problem Aw = b where
+
+m(cid:7)
+
+i=1
+
+(cid:26)
+
+2
+m
+
+m(cid:7)
+
+i=1
+
+(cid:12)
+i
+
+xi x
+
+A =
+⎛
+⎜⎜⎝ ...
+⎛
+⎜⎜⎝ ...
+
+x1
+...
+
+x1
+...
+
+. . .
+
+. . .
+
+((cid:7)w,xi(cid:8)− yi )xi = 0.
+(cid:27)
+
+i=1
+
+and b = m(cid:7)
+⎛
+⎜⎜⎝ ...
+x1
+⎛
+...
+⎜⎝ y1
+...
+ym
+
+⎞
+⎟⎠ .
+
+. . .
+
+...
+xm
+...
+
+⎞
+⎟⎟⎠
+⎞
+⎟⎟⎠
+
+...
+xm
+...
+...
+xm
+...
+
+yixi .
+
+(9.6)
+
+(cid:12)
+
+⎞
+⎟⎟⎠
+
+,
+
+(9.7)
+
+(9.8)
+
+Or, in matrix form:
+
+A =
+
+b =
+
+If A is invertible then the solution to the ERM problem is
+
+w = A
+
+−1 b.
+
+The case in which A is not invertible requires a few standard tools from linear alge-
+bra, which are available in Appendix C. It can be easily shown that if the training
+instances do not span the entire space of Rd then A is not invertible. Nevertheless,
+we can always ﬁnd a solution to the system Aw = b because b is in the range of A.
+Indeed, since A is symmetric we can write it using its eigenvalue decomposition as
+A = V DV
+(cid:12)
+, where D is a diagonal matrix and V is an orthonormal matrix (that is,
+(cid:12)
+to be the diagonal matrix such that
+V
++
+D
+i ,i
+
+V is the identity d × d matrix). Deﬁne D
+= 0 if Di ,i = 0 and otherwise D
++ = V D
+
+= 1/Di ,i . Now, deﬁne
+(cid:12)
+b.
+V
+
+ˆw = A
+
++
+i ,i
++
+
+and
+
++
+
++
+
+A
+
+Let vi denote the i’th column of V . Then, we have
+b = V DD
+
+A ˆw = A A
+
+b = V DV
+
+V D
+
++
+
+(cid:12)
+
++
+
+(cid:12)
+
+V
+
++
+
+(cid:12)
+
+b =
+
+V
+
+(cid:7)
+
+i:Di,i(cid:18)=0
+
+(cid:12)
+i b.
+
+viv
+
+That is, A ˆw is the projection of b onto the span of those vectors vi for which Di ,i (cid:18)= 0.
+Since the linear span of x1, . . . ,xm is the same as the linear span of those vi, and b is
+in the linear span of the xi, we obtain that A ˆw = b, which concludes our argument.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:44:25, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.010
+
+9.3 Logistic Regression
+
+97
+
+9.2.2 Linear Regression for Polynomial Regression Tasks
+Some learning tasks call for nonlinear predictors, such as polynomial predictors.
+Take, for instance, a one dimensional polynomial function of degree n, that is,
+
+p(x) = a0 + a1x + a2x 2 +···+ anx n
+
+where (a0, . . . ,an) is a vector of coefﬁcients of size n + 1. In the following we depict
+a training set that is better ﬁtted using a 3rd degree polynomial predictor than using
+a linear predictor.
+
+We will focus here on the class of one dimensional, n-degree, polynomial
+
+regression predictors, namely,
+
+Hn
+
+poly
+
+= {x (cid:29)→ p(x)},
+
+where p is a one dimensional polynomial of degree n, parameterized by a vector of
+coefﬁcients (a0, . . . ,an). Note that X = R, since this is a one dimensional polynomial,
+and Y = R, as this is a regression problem.
+
+One way to learn this class is by reduction to the problem of linear regression,
+which we have already shown how to solve. To translate a polynomial regression
+problem to a linear regression problem, we deﬁne the mapping ψ : R → Rn+1 such
+that ψ(x) = (1, x , x 2, . . . , x n). Then we have that
+
+p(ψ(x)) = a0 + a1x + a2x 2 +···+ anx n = (cid:7)a, ψ(x)(cid:8)
+
+and we can ﬁnd the optimal vector of coefﬁcients a by using the Least Squares
+algorithm as shown earlier.
+
+9.3 LOGISTIC REGRESSION
+In logistic regression we learn a family of functions h from Rd to the interval [0,1].
+However, logistic regression is used for classiﬁcation tasks: We can interpret h(x) as
+the probability that the label of x is 1. The hypothesis class associated with logistic
+regression is the composition of a sigmoid function φsig : R → [0,1] over the class of
+linear functions Ld. In particular, the sigmoid function used in logistic regression is
+the logistic function, deﬁned as
+
+φsig(z) =
+
+1
+
+1+ exp(− z)
+
+.
+
+(9.9)
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:44:25, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.010
+
+98
+
+Linear Predictors
+
+The name “sigmoid” means “S-shaped,” referring to the plot of this function, shown
+in the ﬁgure:
+
+The hypothesis class is therefore (where for simplicity we are using homogenous
+
+linear functions):
+
+Hsig = φsig ◦ Ld = {x (cid:29)→ φsig((cid:7)w,x(cid:8)) : w ∈ Rd}.
+
+Note that when (cid:7)w,x(cid:8) is very large then φsig((cid:7)w,x(cid:8)) is close to 1, whereas if (cid:7)w,x(cid:8)
+is very small then φsig((cid:7)w,x(cid:8)) is close to 0. Recall that the prediction of the halfs-
+pace corresponding to a vector w is sign((cid:7)w,x(cid:8)). Therefore, the predictions of the
+halfspace hypothesis and the logistic hypothesis are very similar whenever |(cid:7)w,x(cid:8)| is
+large. However, when |(cid:7)w,x(cid:8)| is close to 0 we have that φsig((cid:7)w,x(cid:8)) ≈ 1
+2. Intuitively,
+the logistic hypothesis is not sure about the value of the label so it guesses that the
+label is sign((cid:7)w,x(cid:8)) with probability slightly larger than 50%. In contrast, the halfs-
+pace hypothesis always outputs a deterministic prediction of either 1 or −1, even if
+|(cid:7)w,x(cid:8)| is very close to 0.
+Next, we need to specify a loss function. That is, we should deﬁne how bad it is
+to predict some hw(x) ∈ [0,1] given that the true label is y ∈ {±1}. Clearly, we would
+like that hw(x) would be large if y = 1 and that 1 − hw(x) (i.e., the probability of
+predicting −1) would be large if y = −1. Note that
+
+1− hw(x) = 1−
+
+1
+
+1+ exp(−(cid:7)w,x(cid:8))
+
+= exp(−(cid:7)w,x(cid:8))
+1+ exp(−(cid:7)w,x(cid:8))
+
+=
+
+1
+
+1+ exp((cid:7)w,x(cid:8))
+
+.
+
+1
+
+Therefore, any reasonable loss function would increase monotonically with
+1+exp(y(cid:7)w,x(cid:8)), or equivalently, would increase monotonically with 1+ exp(− y(cid:7)w,x(cid:8)).
+The logistic loss function used in logistic regression penalizes hw based on the log of
+1+ exp(− y(cid:7)w,x(cid:8)) (recall that log is a monotonic function). That is,
+
+Therefore, given a training set S = (x1, y1), . . . ,(xm , ym), the ERM problem associ-
+ated with logistic regression is
+
+(cid:3)
+
+(cid:4)
+1+ exp(− y(cid:7)w,x(cid:8))
+
+(cid:9)(hw,(x, y)) = log
+(cid:3)
+(cid:4)
+1+ exp(− yi(cid:7)w,xi(cid:8))
+
+m(cid:7)
+
+log
+
+.
+
+argmin
+w∈Rd
+
+1
+m
+
+i=1
+
+.
+
+(9.10)
+
+The advantage of the logistic loss function is that it is a convex function with respect
+to w; hence the ERM problem can be solved efﬁciently using standard methods.
+We will study how to learn with convex functions, and in particular specify a simple
+algorithm for minimizing convex functions, in later chapters.
+
+The ERM problem associated with logistic regression (Equation (9.10)) is iden-
+tical to the problem of ﬁnding a Maximum Likelihood Estimator, a well-known
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:44:25, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.010
+
+9.6 Exercises
+
+99
+
+statistical approach for ﬁnding the parameters that maximize the joint probability of
+a given data set assuming a speciﬁc parametric probability function. We will study
+the Maximum Likelihood approach in Chapter 24.
+
+9.4 SUMMARY
+The family of linear predictors is one of the most useful families of hypothesis
+classes, and many learning algorithms that are being widely used in practice rely
+on linear predictors. We have shown efﬁcient algorithms for learning linear predic-
+tors with respect to the zero-one loss in the separable case and with respect to the
+squared and logistic losses in the unrealizable case. In later chapters we will present
+the properties of the loss function that enable efﬁcient learning.
+
+Naturally, linear predictors are effective whenever we assume, as prior knowl-
+edge, that some linear predictor attains low risk with respect to the underlying
+distribution. In the next chapter we show how to construct nonlinear predictors by
+composing linear predictors on top of simple classes. This will enable us to employ
+linear predictors for a variety of prior knowledge assumptions.
+
+9.5 BIBLIOGRAPHIC REMARKS
+The Perceptron algorithm dates back to Rosenblatt (1958). The proof of its conver-
+gence rate is due to (Agmon 1954, Novikoff 1962). Least Squares regression goes
+back to Gauss (1795), Legendre (1805), and Adrain (1808).
+
+9.6 EXERCISES
+9.1 Show how to cast the ERM problem of linear regression with respect to the absolute
+value loss function, (cid:9)(h,(x, y)) = |h(x)− y|, as a linear program; namely, show how
+to write the problem
+
+m(cid:7)
+
+min
+w
+
+i=1
+
+|(cid:7)w,xi(cid:8)− yi|
+
+as a linear program.
+Hint: Start with proving that for any c ∈ R,
+
+|c| = min
+a≥0
+
+a s.t. c ≤ a and c ≥ −a.
+
+9.2 Show that the matrix A deﬁned in Equation (9.6) is invertible if and only if x1, . . . ,xm
+
+span Rd.
+
+9.3 Show that Theorem 9.1 is tight in the following sense: For any positive integer m,
+∗ ∈ Rd (for some appropriate d) and a sequence of examples
+
+there exist a vector w
+{(x1, y1), . . .,(xm , ym)} such that the following hold:
+(cid:2) R = maxi (cid:9)xi(cid:9) ≤ 1.
+(cid:2) (cid:9)w∗(cid:9)2 = m, and for all i ≤ m, yi(cid:7)xi ,w∗(cid:8) ≥ 1. Note that, using the notation in
+
+Theorem 9.1, we therefore get
+
+B = min{(cid:9)w(cid:9) : ∀i ∈ [m], yi(cid:7)w, xi(cid:8) ≥ 1} ≤ √
+
+m.
+
+Thus, (B R)2 ≤ m.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:44:25, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.010
+
+100
+
+Linear Predictors
+
+before converging.
+
+(cid:2) When running the Perceptron on this sequence of examples it makes m updates
+Hint: Choose d = m and for every i choose xi = ei .
+9.4 (*) Given any number m, ﬁnd an example of a sequence of labeled examples
+((x1, y1), . . . ,(xm , ym)) ∈ (R3 ×{−1,+1})m on which the upper bound of Theorem 9.1
+equals m and the perceptron algorithm is bound to make m mistakes.
+Hint: Set each xi to be a third dimensional vector of the form (a, b, yi), where
+a2 + b2 = R2 − 1. Let w∗
+be the vector (0,0,1). Now, go over the proof of the Per-
+ceptron’s upper bound (Theorem 9.1), see where we used inequalities (≤) rather
+than equalities (=), and ﬁgure out scenarios where the inequality actually holds with
+equality.
+9.5 Suppose we modify the Perceptron algorithm as follows: In the update step, instead
+of performing w(t+1) = w(t)+ yixi whenever we make a mistake, we perform w(t+1) =
+w(t) + ηyixi for some η > 0. Prove that the modiﬁed Perceptron will perform the
+same number of iterations as the vanilla Perceptron and will converge to a vector
+that points to the same direction as the output of the vanilla Perceptron.
+
+9.6 In this problem, we will get bounds on the VC-dimension of the class of (closed)
+
+balls in Rd, that is,
+
+Bd = {Bv,r : v ∈ Rd ,r > 0},
+
+*
+
+where
+
+Bv,r (x) =
+
+if (cid:9)x− v(cid:9) ≤ r
+
+1
+0 otherwise
+
+.
+
+1. Consider the mapping φ : Rd → Rd+1 deﬁned by φ(x) = (x,(cid:9)x(cid:9)2). Show that if
+x1, . . . ,xm are shattered by Bd then φ(x1), . . . , φ(xm) are shattered by the class of
+halfspaces in Rd+1 (in this question we assume that sign(0) = 1). What does this
+tell us about VCdim(Bd)?
+
+2. (*) Find a set of d + 1 points in Rd that is shattered by Bd. Conclude that
+
+d + 1 ≤ VCdim(Bd) ≤ d + 2.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:44:25, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.010
+
+

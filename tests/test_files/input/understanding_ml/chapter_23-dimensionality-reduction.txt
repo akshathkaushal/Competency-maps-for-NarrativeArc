@@ -1,0 +1,1950 @@
+23
+
+Dimensionality Reduction
+
+Dimensionality reduction is the process of taking data in a high dimensional space
+and mapping it into a new space whose dimensionality is much smaller. This process
+is closely related to the concept of (lossy) compression in information theory. There
+are several reasons to reduce the dimensionality of the data. First, high dimensional
+data impose computational challenges. Moreover, in some situations high dimen-
+sionality might lead to poor generalization abilities of the learning algorithm (for
+example, in Nearest Neighbor classiﬁers the sample complexity increases exponen-
+tially with the dimension—see Chapter 19). Finally, dimensionality reduction can
+be used for interpretability of the data, for ﬁnding meaningful structure of the data,
+and for illustration purposes.
+
+In this chapter we describe popular methods for dimensionality reduction. In
+those methods, the reduction is performed by applying a linear transformation to
+the original data. That is, if the original data is in Rd and we want to embed it into
+Rn (n < d) then we would like to ﬁnd a matrix W ∈ Rn,d that induces the mapping
+x (cid:29)→ Wx. A natural criterion for choosing W is in a way that will enable a reasonable
+recovery of the original x. It is not hard to show that in general, exact recovery of x
+from Wx is impossible (see Exercise 23.1).
+
+The ﬁrst method we describe is called Principal Component Analysis (PCA).
+In PCA, both the compression and the recovery are performed by linear transfor-
+mations and the method ﬁnds the linear transformations for which the differences
+between the recovered vectors and the original vectors are minimal in the least
+squared sense.
+
+Next, we describe dimensionality reduction using random matrices W . We
+derive an important lemma, often called the “Johnson-Lindenstrauss lemma,”
+which analyzes the distortion caused by such a random dimensionality reduction
+technique.
+
+Last, we show how one can reduce the dimension of all sparse vectors using
+again a random matrix. This process is known as Compressed Sensing. In this case,
+the recovery process is nonlinear but can still be implemented efﬁciently using linear
+programming.
+
+278
+
+Downloaded from https:/www.cambridge.org/core. SUNY Buffalo State, on 28 Feb 2017 at 10:41:37, subject to the Cambridge Core terms of use, available at
+https:/www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.024
+
+23.1 Principal Component Analysis (PCA)
+
+279
+
+We conclude by underscoring the underlying “prior assumptions” behind PCA
+and compressed sensing, which can help us understand the merits and pitfalls of the
+two methods.
+
+23.1 PRINCIPAL COMPONENT ANALYSIS (PCA)
+Let x1, . . . ,xm be m vectors in Rd. We would like to reduce the dimensionality of
+these vectors using a linear transformation. A matrix W ∈ Rn,d, where n < d, induces
+a mapping x (cid:29)→ Wx, where Wx ∈ Rn is the lower dimensionality representation of x.
+Then, a second matrix U ∈ Rd,n can be used to (approximately) recover each original
+vector x from its compressed version. That is, for a compressed vector y = Wx,
+where y is in the low dimensional space Rn, we can construct ˜x = Uy, so that ˜x is the
+recovered version of x and resides in the original high dimensional space Rd.
+
+In PCA, we ﬁnd the compression matrix W and the recovering matrix U so that
+the total squared distance between the original and recovered vectors is minimal;
+namely, we aim at solving the problem
+
+m(cid:7)
+
+argmin
+
+W∈Rn,d ,U∈Rd,n
+
+i=1
+
+(cid:9)xi − U Wxi(cid:9)2
+2.
+
+(23.1)
+
+To solve this problem we ﬁrst show that the optimal solution takes a speciﬁc
+
+form.
+
+(cid:12)
+
+U is the identity matrix of Rn) and W = U
+
+Lemma 23.1. Let (U , W ) be a solution to Equation (23.1). Then the columns of U
+are orthonormal (namely, U
+Proof. Fix any U, W and consider the mapping x (cid:29)→ U Wx. The range of this map-
+ping, R = {U Wx : x ∈ Rd}, is an n dimensional linear subspace of Rd. Let V ∈ Rd,n
+be a matrix whose columns form an orthonormal basis of this subspace, namely, the
+V = I . Therefore, each vector in R can be written as V y
+range of V is R and V
+where y ∈ Rn. For every x ∈ Rd and y ∈ Rn we have
+
+(cid:12)
+
+(cid:12)
+
+.
+
+(cid:9)x− V y(cid:9)2
+
+2
+
+= (cid:9)x(cid:9)2 + y
+
+(cid:12)
+
+(cid:12)
+
+V y− 2y
+
+(cid:12)
+
+V
+
+(cid:12)
+
+x = (cid:9)x(cid:9)2 +(cid:9)y(cid:9)2 − 2y
+
+(cid:12)
+
+(V
+
+(cid:12)
+
+x),
+
+V is the identity matrix of Rn. Minimizing the pre-
+where we used the fact that V
+ceding expression with respect to y by comparing the gradient with respect to y to
+zero gives that y = V
+
+x. Therefore, for each x we have that
+
+(cid:12)
+
+V
+(cid:12)
+
+V V
+
+(cid:12)
+
+x = argmin
+˜x∈R
+
+(cid:9)x− ˜x(cid:9)2
+2.
+
+In particular this holds for x1, . . . ,xm and therefore we can replace U , W by V , V
+and by that do not increase the objective
+
+(cid:12)
+
+m(cid:7)
+
+i=1
+
+≥ m(cid:7)
+
+i=1
+
+(cid:9)xi − U Wxi(cid:9)2
+
+2
+
+(cid:9)xi − V V
+
+(cid:12)
+
+xi(cid:9)2
+2.
+
+Since this holds for every U , W the proof of the lemma follows.
+
+Downloaded from https:/www.cambridge.org/core. SUNY Buffalo State, on 28 Feb 2017 at 10:41:37, subject to the Cambridge Core terms of use, available at
+https:/www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.024
+
+280
+
+Dimensionality Reduction
+
+On the basis of the preceding lemma, we can rewrite the optimization problem
+
+given in Equation (23.1) as follows:
+
+m(cid:7)
+
+argmin
+
+U∈Rd,n:U(cid:12)U=I
+
+i=1
+
+(cid:9)xi − UU
+(cid:12)
+
+xi(cid:9)2
+2.
+
+(23.2)
+
+Let A =(cid:2)
+
+m
+
+i=1 xix(cid:12)
+
+We further simplify the optimization problem by using the following elementary
+algebraic manipulations. For every x ∈ Rd and a matrix U ∈ Rd,n such that U
+U = I
+we have
+
+(cid:12)
+
+(cid:9)x− UU
+(cid:12)
+
+x(cid:9)2 = (cid:9)x(cid:9)2 − 2x
+(cid:12)
+(cid:12)
+UU
+= (cid:9)x(cid:9)2 − x
+(cid:12)
+(cid:12)
+UU
+= (cid:9)x(cid:9)2 − trace(U
+
+x
+(cid:12)
+
+x+ x
+
+(cid:12)
+
+UU
+
+(cid:12)
+
+(cid:12)
+UU
+
+x
+
+(cid:12)
+
+xx
+
+U),
+
+(23.3)
+
+where the trace of a matrix is the sum of its diagonal entries. Since the trace is a
+linear operator, this allows us to rewrite Equation (23.2) as follows:
+
+(cid:27)
+
+(cid:26)
+
+(cid:12) m(cid:7)
+
+i=1
+
+argmax
+
+U∈Rd,n:U(cid:12)U=I
+
+trace
+
+U
+
+(cid:12)
+i U
+
+xix
+
+.
+
+(23.4)
+
+(cid:12)
+
+(cid:12)
+
+, where D is diagonal and V
+
+i . The matrix A is symmetric and therefore it can be written
+V =
+using its spectral decomposition as A = VDV
+(cid:12) = I . Here, the elements on the diagonal of D are the eigenvalues of A and
+VV
+the columns of V are the corresponding eigenvectors. We assume without loss of
+generality that D1,1 ≥ D2,2 ≥ ··· ≥ Dd,d. Since A is positive semideﬁnite it also holds
+that Dd,d ≥ 0. We claim that the solution to Equation (23.4) is the matrix U whose
+columns are the n eigenvectors of A corresponding to the largest n eigenvalues.
+
+Theorem 23.2. Let x1, . . . ,xm be arbitrary vectors in Rd, let A =(cid:2)
+
+(cid:12)
+i , and let
+u1, . . . ,un be n eigenvectors of the matrix A corresponding to the largest n eigenvalues
+of A. Then, the solution to the PCA optimization problem given in Equation (23.1) is
+to set U to be the matrix whose columns are u1, . . . ,un and to set W = U
+Proof. Let VDV
+with orthonormal columns and let B = V
+that
+
+be the spectral decomposition of A. Fix some matrix U ∈ Rd,n
+U = U. It follows
+
+U. Then, VB = VV
+
+m
+i=1 xix
+
+(cid:12)
+
+(cid:12)
+
+(cid:12)
+
+(cid:12)
+
+.
+
+(cid:12)
+
+AU = B
+
+(cid:12)
+
+V
+
+(cid:12)
+
+U
+
+VDV
+
+(cid:12)
+
+(cid:12)
+
+DB,
+
+(cid:12)
+
+trace(U
+
+and therefore
+
+AU) = d(cid:7)
+(cid:2)
+(cid:2)
+U = U
+U = I . Therefore, the columns of B are also
+Note that B
+= n. In addition, let ˜B ∈ Rd,d be
+(cid:2)
+d
+j=1
+orthonormal, which implies that
+a matrix such that its ﬁrst n columns are the columns of B and in addition ˜B
+(cid:12) ˜B = I .
+˜B2
+≤ 1. It
+n
+i=1 B2
+Then, for every j we have
+j ,i
+
+n
+i=1 B2
+j ,i
+= 1, which implies that
+
+B = U
+
+(cid:2)
+
+D j , j
+
+d
+i=1
+
+j=1
+
+i=1
+
+VV
+
+j ,i.
+
+B2
+
+(cid:12)
+
+(cid:12)
+
+(cid:12)
+
+(cid:12)
+
+j ,i
+
+VB = B
+n(cid:7)
+
+Downloaded from https:/www.cambridge.org/core. SUNY Buffalo State, on 28 Feb 2017 at 10:41:37, subject to the Cambridge Core terms of use, available at
+https:/www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.024
+
+23.1 Principal Component Analysis (PCA)
+
+281
+
+follows that
+
+trace(U
+
+(cid:12)
+
+AU) ≤
+
+max
+
+β∈[0,1]d :(cid:9)β(cid:9)1≤n
+
+d(cid:7)
+
+j=1
+
+D j , j β j .
+
+(cid:2)
+
+n
+j=1 D j , j . We have
+It is not hard to verify (see 23.2) that the right-hand side equals
+therefore shown that for every matrix U ∈ Rd,n with orthonormal columns it holds
+(cid:2)
+n
+j=1 D j , j . On the other hand, if we set U to be the matrix
+that trace(U
+AU) =
+whose columns are the n leading eigenvectors of A we obtain that trace(U
+
+AU) ≤(cid:2)
+
+(cid:12)
+
+(cid:12)
+
+n
+j=1 D j , j , and this concludes our proof.
+
+m
+i=1
+
+(cid:2)
+
+(cid:9)xi(cid:9)2 = trace(A) =(cid:2)
+
+Remark 23.1. The proof of Theorem 23.2 also tells us that the value of the objective
+n
+i=1 Di ,i . Combining this with Equation (23.3) and noting
+of Equation (23.4) is
+d
+i=1 Di ,i we obtain that the optimal objective value
+that
+d
+i=n+1 Di ,i .
+of Equation (23.1) is
+Remark 23.2. It is a common practice to “center” the examples before applying
+PCA. That is, we ﬁrst calculate μ = 1
+m
+i=1 xi and then apply PCA on the vectors
+(x1 − μ), . . . ,(xm − μ). This is also related to the interpretation of PCA as variance
+maximization (see Exercise 23.4).
+
+(cid:2)
+
+m
+
+(cid:2)
+(cid:2)
+
+23.1.1 A More Efﬁcient Solution for the Case d & m
+In some situations the original dimensionality of the data is much larger than the
+number of examples m. The computational complexity of calculating the PCA solu-
+tion as described previously is O(d3) (for calculating eigenvalues of A) plus O(md2)
+(for constructing the matrix A). We now show a simple trick that enables us to
+calculate the PCA solution more efﬁciently when d & m.
+(cid:12)
+i . It is convenient to rewrite
+A = X
+X where X ∈ Rm,d is a matrix whose ith row is x(cid:12)
+(cid:12)
+i . Consider the matrix
+. That is, B ∈ Rm,m is the matrix whose i , j element equals (cid:7)xi ,x j(cid:8). Suppose
+B = X X
+(cid:12)
+that u is an eigenvector of B: That is, Bu = λu for some λ ∈ R. Multiplying the
+(cid:12)u= λX
+(cid:12)u. But, using
+equality by X
+X X
+(cid:12)u
+(cid:12)u). Thus, X
+(cid:9)X(cid:12)u(cid:9) is an eigenvector of
+the deﬁnition of A, we get that A(X
+A with eigenvalue of λ.
+
+Recall that the matrix A is deﬁned to be
+
+and using the deﬁnition of B we obtain X
+
+(cid:12)u) = λ(X
+
+m
+i=1 xix
+
+(cid:2)
+
+(cid:12)
+
+(cid:12)
+
+We can therefore calculate the PCA solution by calculating the eigenvalues of
+B instead of A. The complexity is O(m3) (for calculating eigenvalues of B) and m2d
+(for constructing the matrix B).
+Remark 23.3. The previous discussion also implies that to calculate the PCA solu-
+tion we only need to know how to calculate inner products between vectors. This
+enables us to calculate PCA implicitly even when d is very large (or even inﬁnite)
+using kernels, which yields the kernel PCA algorithm.
+
+23.1.2 Implementation and Demonstration
+A pseudocode of PCA is given in the following.
+
+Downloaded from https:/www.cambridge.org/core. SUNY Buffalo State, on 28 Feb 2017 at 10:41:37, subject to the Cambridge Core terms of use, available at
+https:/www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.024
+
+282
+
+Dimensionality Reduction
+
+PCA
+
+input
+A matrix of m examples X ∈ Rm,d
+number of components n
+if (m > d)
+A = X
+(cid:12)
+X
+Let u1, . . . ,un be the eigenvectors of A with largest eigenvalues
+else
+B = X X
+Let v1, . . . ,vn be the eigenvectors of B with largest eigenvalues
+for i = 1, . . . ,n set ui = 1(cid:9)X(cid:12)vi(cid:9) X
+output: u1, . . . ,un
+
+(cid:12)vi
+
+(cid:12)
+
+To illustrate how PCA works, let us generate vectors in R2 that approximately
+reside on a line, namely, on a one dimensional subspace of R2. For example, suppose
+that each example is of the form (x , x + y) where x is chosen uniformly at random
+from [ − 1,1] and y is sampled from a Gaussian distribution with mean 0 and stan-
+√
+√
+dard deviation of 0.1. Suppose we apply PCA on this data. Then, the eigenvector
+2,1/
+2).
+corresponding to the largest eigenvalue will be close to the vector (1/
+When projecting a point (x , x + y) on this principal component we will obtain the
+scalar 2x+y√
+. The reconstruction of the original vector will be ((x + y/2),(x + y/2)).
+In Figure 23.1 we depict the original versus reconstructed data.
+
+2
+
+1.5
+
+1
+
+0.5
+
+0
+
+−0.5
+
+−1
+
+−1.5
+
+−1.5
+
+−1
+
+−0.5
+
+0
+
+0.5
+
+1
+
+1.5
+
+Figure 23.1. A set of vectors in R2 (x’s) and their reconstruction after dimensionality
+reduction to R1 using PCA (circles).
+
+Downloaded from https:/www.cambridge.org/core. SUNY Buffalo State, on 28 Feb 2017 at 10:41:37, subject to the Cambridge Core terms of use, available at
+https:/www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.024
+
+23.2 Random Projections
+
+283
+
+o
+
+o oo
+o
+
+o
+
+o
+
++
+
++ ++
++ +
++
+
+x
+
+x
+
+x
+
+x
+
+x xx
+*
+
+*
+
+***
+
+*
+*
+
+Figure 23.2. Images of faces extracted from the Yale data set. Top-left: the original
+images in R50x50. Top-right: the images after dimensionality reduction to R10 and recon-
+struction. Middle row: an enlarged version of one of the images before and after PCA.
+Bottom: the images after dimensionality reduction to R2. The different marks indicate
+different individuals.
+
+Next, we demonstrate the effectiveness of PCA on a data set of faces. We
+extracted images of faces from the Yale data set (Georghiades, Belhumeur &
+Kriegman 2001). Each image contains 50× 50 = 2500 pixels; therefore the original
+dimensionality is very high.
+
+Some images of faces are depicted on the top-left side of Figure 23.2. Using PCA,
+we reduced the dimensionality to R10 and reconstructed back to the original dimen-
+sion, which is 502. The resulting reconstructed images are depicted on the top-right
+side of Figure 23.2. Finally, on the bottom of Figure 23.2 we depict a 2 dimen-
+sional representation of the images. As can be seen, even from a 2 dimensional
+representation of the images we can still roughly separate different individuals.
+
+23.2 RANDOM PROJECTIONS
+In this section we show that reducing the dimension by using a random linear trans-
+formation leads to a simple compression scheme with a surprisingly low distortion.
+The transformation x (cid:29)→ Wx, when W is a random matrix, is often referred to
+as a random projection. In particular, we provide a variant of a famous lemma
+
+Downloaded from https:/www.cambridge.org/core. SUNY Buffalo State, on 28 Feb 2017 at 10:41:37, subject to the Cambridge Core terms of use, available at
+https:/www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.024
+
+284
+
+Dimensionality Reduction
+
+due to Johnson and Lindenstrauss, showing that random projections do not distort
+Euclidean distances too much.
+
+Let x1,x2 be two vectors in Rd. A matrix W does not distort too much the
+
+distance between x1 and x2 if the ratio
+
+(cid:9)Wx1 − Wx2(cid:9)
+(cid:9)x1 − x2(cid:9)
+
+is close to 1. In other words, the distances between x1 and x2 before and after the
+transformation are almost the same. To show that (cid:9)Wx1 − Wx2(cid:9) is not too far away
+from (cid:9)x1 − x2(cid:9) it sufﬁces to show that W does not distort the norm of the difference
+vector x = x1 − x2. Therefore, from now on we focus on the ratio
+
+We start with analyzing the distortion caused by applying a random projection
+
+(cid:9)W x(cid:9)
+(cid:9)x(cid:9) .
+
+to a single vector.
+Lemma 23.3. Fix some x∈ Rd. Let W ∈ Rn,d be a random matrix such that each Wi , j
+is an independent normal random variable. Then, for every (cid:2) ∈ (0,3) we have
+
+11(1/
+
+(cid:13) (cid:14)(cid:14)(cid:14)(cid:14)(cid:14)
+
+√
+n)Wx
+(cid:9)x(cid:9)2
+
+112
+
+(cid:14)(cid:14)(cid:14)(cid:14)(cid:14) > (cid:2)
+
+− 1
+
+≤ 2 e
+
+−(cid:2)2n/6.
+
+Proof. Without loss of generality we can assume that (cid:9)x(cid:9)2 = 1. Therefore, an
+equivalent inequality is
+
+(cid:15)
+
+(cid:12)
+
+P
+
+(cid:11)
+
+(1− (cid:2))n ≤ (cid:9)Wx(cid:9)2 ≤ (1+ (cid:2))n
+
+≥ 1− 2e
+
+−(cid:2)2n/6.
+
+P
+
+(cid:9)Wx(cid:9)2 =(cid:2)
+
+(cid:2)
+i=1 ((cid:7)wi ,x(cid:8))2 has a χ 2
+
+Let wi be the ith row of W . The random variable (cid:7)wi ,x(cid:8) is a weighted sum of
+d independent normal random variables and therefore it is normally distributed
+= (cid:9)x(cid:9)2 = 1. Therefore, the random variable
+j x 2
+with zero mean and variance
+j
+n distribution. The claim now follows directly from
+a measure concentration property of χ 2 random variables stated in Lemma B.12
+given in Section B.7.
+
+n
+
+The Johnson-Lindenstrauss lemma follows from this using a simple union bound
+
+argument.
+
+Lemma 23.4 (Johnson-Lindenstrauss Lemma). Let Q be a ﬁnite set of vectors in
+Rd. Let δ ∈ (0,1) and n be an integer such that
+
+(cid:23)
+
+(cid:2) =
+
+6 log(2|Q|/δ)
+
+n
+
+≤ 3.
+
+Then, with probability of at least 1 − δ over a choice of a random matrix W ∈ Rn,d
+such that each element of W is distributed normally with zero mean and variance of
+1/n we have
+
+(cid:14)(cid:14)(cid:14)(cid:14)(cid:14)(cid:9)Wx(cid:9)2
+
+(cid:9)x(cid:9)2
+
+(cid:14)(cid:14)(cid:14)(cid:14)(cid:14) < (cid:2).
+
+− 1
+
+sup
+x∈Q
+
+Downloaded from https:/www.cambridge.org/core. SUNY Buffalo State, on 28 Feb 2017 at 10:41:37, subject to the Cambridge Core terms of use, available at
+https:/www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.024
+
+23.3 Compressed Sensing
+Proof. Combining Lemma 23.3 and the union bound we have that for every (cid:2) ∈
+(0,3):
+
+(cid:13)
+
+285
+
+P
+
+sup
+x∈Q
+
+(cid:15)
+
+(cid:14)(cid:14)(cid:14)(cid:14)(cid:14) > (cid:2)
+
+(cid:14)(cid:14)(cid:14)(cid:14)(cid:14)(cid:9)Wx(cid:9)2
+− 1
+(cid:9)x(cid:9)2
+(cid:23)
+
+(cid:2) =
+
+6 log(2|Q|/δ)
+
+.
+
+n
+
+≤ 2|Q| e
+
+−(cid:2)2n/6.
+
+Let δ denote the right-hand side of the inequality; thus we obtain that
+
+Interestingly, the bound given in Lemma 23.4 does not depend on the original
+dimension of x. In fact, the bound holds even if x is in an inﬁnite dimensional Hilbert
+space.
+
+23.3 COMPRESSED SENSING
+Compressed sensing is a dimensionality reduction technique which utilizes a prior
+assumption that the original vector is sparse in some basis. To motivate compressed
+sensing, consider a vector x ∈ Rd that has at most s nonzero elements. That is,
+
+(cid:9)x(cid:9)0
+
+def= |{i : xi (cid:18)= 0}| ≤ s.
+
+Clearly, we can compress x by representing it using s (index,value) pairs. Fur-
+thermore, this compression is lossless – we can reconstruct x exactly from the s
+(index,value) pairs. Now, lets take one step forward and assume that x = U α, where
+α is a sparse vector, (cid:9)α(cid:9)0 ≤ s, and U is a ﬁxed orthonormal matrix. That is, x has a
+sparse representation in another basis. It turns out that many natural vectors are (at
+least approximately) sparse in some representation. In fact, this assumption under-
+lies many modern compression schemes. For example, the JPEG-2000 format for
+image compression relies on the fact that natural images are approximately sparse
+in a wavelet basis.
+
+(cid:12)
+
+Can we still compress x into roughly s numbers? Well, one simple way to do this
+is to multiply x by U
+, which yields the sparse vector α, and then represent α by its s
+(index,value) pairs. However, this requires us ﬁrst to “sense” x, to store it, and then
+(cid:12)
+to multiply it by U
+. This raises a very natural question: Why go to so much effort
+to acquire all the data when most of what we get will be thrown away? Cannot we
+just directly measure the part that will not end up being thrown away?
+
+Compressed sensing is a technique that simultaneously acquires and compresses
+the data. The key result is that a random linear transformation can compress x with-
+out losing information. The number of measurements needed is order of s log(d).
+That is, we roughly acquire only the important information about the signal. As we
+will see later, the price we pay is a slower reconstruction phase. In some situations,
+it makes sense to save time in compression even at the price of a slower reconstruc-
+tion. For example, a security camera should sense and compress a large amount of
+images while most of the time we do not need to decode the compressed data at
+all. Furthermore, in many practical applications, compression by a linear transfor-
+mation is advantageous because it can be performed efﬁciently in hardware. For
+
+Downloaded from https:/www.cambridge.org/core. SUNY Buffalo State, on 28 Feb 2017 at 10:41:37, subject to the Cambridge Core terms of use, available at
+https:/www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.024
+
+286
+
+Dimensionality Reduction
+
+example, a team led by Baraniuk and Kelly has proposed a camera architecture
+that employs a digital micromirror array to perform optical calculations of a linear
+transformation of an image. In this case, obtaining each compressed measurement
+is as easy as obtaining a single raw measurement. Another important application
+of compressed sensing is medical imaging, in which requiring fewer measurements
+translates to less radiation for the patient.
+
+Informally, the main premise of compressed sensing is the following three
+
+“surprising” results:
+
+1. It is possible to reconstruct any sparse signal fully if it was compressed by
+x (cid:29)→ Wx, where W is a matrix which satisﬁes a condition called the Restricted
+Isoperimetric Property (RIP). A matrix that satisﬁes this property is guar-
+anteed to have a low distortion of the norm of any sparse representable
+vector.
+
+2. The reconstruction can be calculated in polynomial time by solving a linear
+3. A random n× d matrix is likely to satisfy the RIP condition provided that n is
+
+program.
+
+greater than an order of s log(d).
+
+Formally,
+
+Deﬁnition 23.5 (RIP). A matrix W ∈ Rn,d is ((cid:2),s)-RIP if for all x (cid:18)= 0 s.t. (cid:9)x(cid:9)0 ≤ s we
+have
+
+(cid:14)(cid:14)(cid:14)(cid:14)(cid:14)(cid:9)Wx(cid:9)2
+
+(cid:9)x(cid:9)2
+
+2
+
+2
+
+(cid:14)(cid:14)(cid:14)(cid:14)(cid:14) ≤ (cid:2).
+
+− 1
+
+The ﬁrst theorem establishes that RIP matrices yield a lossless compression
+scheme for sparse vectors. It also provides a (nonefﬁcient) reconstruction scheme.
+
+Theorem 23.6. Let (cid:2) < 1 and let W be a ((cid:2),2s)-RIP matrix. Let x be a vector s.t.
+(cid:9)x(cid:9)0 ≤ s, let y = Wx be the compression of x, and let
+(cid:9)v(cid:9)0
+
+˜x ∈ argmin
+v:W v=y
+
+be a reconstructed vector. Then, ˜x = x.
+Proof. We assume, by way of contradiction, that ˜x (cid:18)= x. Since x satisﬁes the con-
+straints in the optimization problem that deﬁnes ˜x we clearly have that (cid:9)˜x(cid:9)0 ≤(cid:9)x(cid:9)0 ≤
+s. Therefore, (cid:9)x− ˜x(cid:9)0 ≤ 2s and we can apply the RIP inequality on the vector x− ˜x.
+But, since W (x− ˜x) = 0 we get that |0− 1| ≤ (cid:2), which leads to a contradiction.
+
+The reconstruction scheme given in Theorem 23.6 seems to be nonefﬁcient
+because we need to minimize a combinatorial objective (the sparsity of v). Quite
+surprisingly, it turns out that we can replace the combinatorial objective, (cid:9)v(cid:9)0, with
+a convex objective, (cid:9)v(cid:9)1, which leads to a linear programming problem that can be
+solved efﬁciently. This is stated formally in the following theorem.
+1+√
+Theorem 23.7. Assume that the conditions of Theorem 23.6 holds and that (cid:2) < 1
+Then,
+
+2
+
+.
+
+x = argmin
+v:W v=y
+
+(cid:9)v(cid:9)0 = argmin
+v:W v=y
+
+(cid:9)v(cid:9)1.
+
+Downloaded from https:/www.cambridge.org/core. SUNY Buffalo State, on 28 Feb 2017 at 10:41:37, subject to the Cambridge Core terms of use, available at
+https:/www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.024
+
+23.3 Compressed Sensing
+
+287
+
+In fact, we will prove a stronger result, which holds even if x is not a sparse
+
+vector.
+1+√
+Theorem 23.8. Let (cid:2) < 1
+vector and denote
+
+2
+
+and let W be a ((cid:2),2s)-RIP matrix. Let x be an arbitrary
+xs ∈ argmin
+v:(cid:9)v(cid:9)0≤s
+
+(cid:9)x− v(cid:9)1.
+
+That is, xs is the vector which equals x on the s largest elements of x and equals 0
+elsewhere. Let y = Wx be the compression of x and let
+
+x(cid:7) ∈ argmin
+v:W v=y
+
+(cid:9)v(cid:9)1
+
+be the reconstructed vector. Then,
+
+(cid:9)x(cid:7) − x(cid:9)2 ≤ 2
+
+1+ ρ
+1− ρ
+
+−1/2(cid:9)x− xs(cid:9)1,
+
+s
+
+where ρ = √
+
+2(cid:2)/(1− (cid:2)).
+
+Note that in the special case that x = xs we get an exact recovery, x(cid:7) = x, so
+Theorem 23.7 is a special case of Theorem 23.8. The proof of Theorem 23.8 is given
+in Section 23.3.1.
+Finally, the third result tells us that random matrices with n ≥ (cid:6)(s log(d)) are
+likely to be RIP. In fact, the theorem shows that multiplying a random matrix by an
+orthonormal matrix also provides an RIP matrix. This is important for compressing
+signals of the form x = U α where x is not sparse but α is sparse. In that case, if W is a
+random matrix and we compress using y = Wx then this is the same as compressing
+α by y = (WU)α and since WU is also RIP we can reconstruct α (and thus also x)
+from y.
+Theorem 23.9. Let U be an arbitrary ﬁxed d×d orthonormal matrix, let (cid:2), δ be scalars
+in (0,1), let s be an integer in [d], and let n be an integer that satisﬁes
+
+n ≥ 100
+
+s log(40d/(δ (cid:2)))
+
+.
+
+(cid:2)2
+
+Let W ∈ Rn,d be a matrix s.t. each element of W is distributed normally with zero
+mean and variance of 1/n. Then, with proabability of at least 1− δ over the choice of
+W , the matrix WU is ((cid:2),s)-RIP.
+
+23.3.1 Proofs*
+Proof of Theorem 23.8
+We follow a proof due to Candès (2008).
+Let h = x(cid:7) − x. Given a vector v and a set of indices I we denote by vI the vector
+whose ith element is vi if i ∈ I and 0 otherwise.
+The ﬁrst trick we use is to partition the set of indices [d] = {1, . . . ,d} into disjoint
+·∪ T1
+·∪ T2 . . . Td/s−1 where for all i, |Ti| =
+sets of size s. That is, we will write [d] = T0
+s, and we assume for simplicity that d/s is an integer. We deﬁne the partition as
+follows. In T0 we put the s indices corresponding to the s largest elements in absolute
+
+Downloaded from https:/www.cambridge.org/core. SUNY Buffalo State, on 28 Feb 2017 at 10:41:37, subject to the Cambridge Core terms of use, available at
+https:/www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.024
+
+288
+
+Dimensionality Reduction
+
+= [d]\T0. Next, T1 will be the s indices
+. Let T0,1 = T0 ∪ T1
+= [d] \ T0,1. Next, T2 will correspond to the s largest elements in absolute
+
+values of x (ties are broken arbitrarily). Let T c
+0
+corresponding to the s largest elements in absolute value of hT c
+0
+and T c
+0,1
+value of hT c
+0,1
+
+. And, we will construct T3, T4, . . . in the same way.
+
+To prove the theorem we ﬁrst need the following lemma, which shows that RIP
+
+also implies approximate orthogonality.
+
+Lemma 23.10 Let W be an ((cid:2),2s)-RIP matrix. Then, for any two disjoint sets I , J ,
+both of size at most s, and for any vector u we have that (cid:7)WuI , WuJ(cid:8) ≤ (cid:2)(cid:9)uI(cid:9)2(cid:9)uJ(cid:9)2.
+Proof. W.l.o.g. assume (cid:9)uI(cid:9)2 = (cid:9)uJ(cid:9)2 = 1.
+
+(cid:7)WuI , WuJ(cid:8) = (cid:9)WuI + WuJ(cid:9)2
+
+2
+
+−(cid:9)WuI − WuJ(cid:9)2
+4
+
+2
+
+.
+
+But, since |J ∪ I| ≤ 2s we get from the RIP condition that (cid:9)WuI + WuJ(cid:9)2
+(cid:2))((cid:9)uI(cid:9)2
+−2(1− (cid:2)), which concludes our proof.
+
+2) = 2(1+ (cid:2)) and that −(cid:9)WuI − WuJ(cid:9)2
+
+≤ −(1− (cid:2))((cid:9)uI(cid:9)2
+
++(cid:9)uJ(cid:9)2
+
+2
+
+2
+
+2
+
+≤ (1 +
+2) =
+
+2
+
++(cid:9)uJ(cid:9)2
+
+We are now ready to prove the theorem. Clearly,
+
+(23.5)
+
+0,1
+
++ hT c
+
+(cid:9)2 ≤ (cid:9)hT0,1
+
+(cid:9)h(cid:9)2 = (cid:9)hT0,1
+
+(cid:9)2 +(cid:9)hT c
+(cid:9)2.
+To prove the theorem we will show the following two claims:
+Claim 1: (cid:9)hT c
+Claim 2: (cid:9)hT0,1
+Combining these two claims with Equation (23.5) we get that
+
+(cid:9)2 + 2s
+−1/2(cid:9)x− xs(cid:9)1.
+
+(cid:9)2 ≤ (cid:9)hT0
+(cid:9)2 ≤ 2ρ
+1−ρ s
+
+−1/2(cid:9)x− xs(cid:9)1.
+
+0,1
+
+0,1
+
+(cid:9)2 + 2s
+
+−1/2(cid:9)x− xs(cid:9)1
+
+0,1
+
+(cid:9)2 ≤ 2(cid:9)hT0,1
+−1/2(cid:9)x− xs(cid:9)1
+
+(cid:16)
+(cid:17)
+(cid:9)h(cid:9)2 ≤ (cid:9)hT0,1
+(cid:9)2 +(cid:9)hT c
++ 1
+2ρ
+1−ρ
+1+ ρ
+−1/2(cid:9)x− xs(cid:9)1,
+1− ρ
+
+≤ 2
+= 2
+
+s
+
+s
+
+and this will conclude our proof.
+
+Proving Claim 1:
+To prove this claim we do not use the RIP condition at all but only use the fact that
+x(cid:7) minimizes the (cid:9)1 norm. Take j > 1. For each i ∈ T j and i
+(cid:3) ∈ T j−1 we have that
+|hi| ≤ |hi(cid:3)|. Therefore, (cid:9)hT j
+(cid:9)hT j
+
+(cid:9)1/s. Thus,
+(cid:9)∞ ≤ s
+
+−1/2(cid:9)hT j−1
+
+(cid:9)1.
+
+Summing this over j = 2,3, . . . and using the triangle inequality we obtain that
+
+(cid:9)∞ ≤ (cid:9)hT j−1
+(cid:9)2 ≤ s1/2(cid:9)hT j
+(cid:7)
+
+(cid:9)hT c
+
+0,1
+
+(cid:9)2 ≤
+
+(cid:9)hT j
+
+(cid:9)2 ≤ s
+
+−1/2(cid:9)hT c
+
+0
+
+(cid:9)1
+
+(23.6)
+
+j≥2
+
+Downloaded from https:/www.cambridge.org/core. SUNY Buffalo State, on 28 Feb 2017 at 10:41:37, subject to the Cambridge Core terms of use, available at
+https:/www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.024
+
+23.3 Compressed Sensing
+Next, we show that (cid:9)hT c
+(cid:9)1 cannot be large. Indeed, from the deﬁnition of x(cid:7) we
+(cid:7)
+have that (cid:9)x(cid:9)1 ≥ (cid:9)x(cid:7)(cid:9)1 = (cid:9)x+ h(cid:9)1. Thus, using the triangle inequality we obtain that
+(cid:9)x(cid:9)1 ≥ (cid:9)x+ h(cid:9)1 =
+(cid:9)1
+
+|xi + hi| ≥ (cid:9)xT0
+
+|xi + hi|+
+
+(cid:9)1 −(cid:9)hT0
+
+(cid:9)1 +(cid:9)hT c
+
+(cid:9)1 −(cid:9)xT c
+
+(cid:7)
+
+0
+
+0
+
+0
+
+289
+
+and since (cid:9)xT c
+
+0
+
+i∈T0
+
+i∈T c
+
+0
+
+(cid:9)1 = (cid:9)x− xs(cid:9)1 = (cid:9)x(cid:9)1 −(cid:9)xT0
+(cid:9)1 ≤ (cid:9)hT0
+
+Combining this with Equation (23.6) we get that
+
+(cid:9)1 we get that
+(cid:9)1 + 2(cid:9)xT c
+(cid:9)1.
+(cid:17)
+
+0
+
+0
+
+(cid:9)hT c
+(cid:16)
+(cid:9)hT0
+
+(cid:9)hT c
+
+0,1
+
+(cid:9)2 ≤ s
+
+−1/2
+
+(cid:9)1 + 2(cid:9)xT c
+
+(cid:9)1
+
+0
+
+≤ (cid:9)hT0
+
+(cid:9)2 + 2s
+
+−1/2(cid:9)xT c
+
+0
+
+(cid:9)1,
+
+which concludes the proof of claim 1.
+
+Proving Claim 2:
+For the second claim we use the RIP condition to get that
+
+Since WhT0,1
+
+= Wh−(cid:2)
+(cid:9)WhT0,1
+
+(cid:9)2
+
+= −
+
+2
+
+= −(cid:2)
+(1− (cid:2))(cid:9)hT0,1
+(cid:7)
+
+j≥2 WhT j
+
+(cid:7)WhT0,1
+
+, WhT j
+
+(cid:9)2
+
+(cid:9)2
+2.
+
+≤ (cid:9)WhT0,1
+2
+(cid:7)
+j≥2 WhT j we have that
+(cid:8) = −
+
+(cid:7)WhT0
+
+j≥2
+
+j≥2
+
++ WhT1
+
+(cid:8).
+
+, WhT j
+
+From the RIP condition on inner products we obtain that for all i ∈ {1,2} and j ≥ 2
+we have
+
+Since (cid:9)hT0
+
+(cid:9)2 +(cid:9)hT1
+
+(cid:9)2 ≤ √
+
+(cid:8)| ≤ (cid:2)(cid:9)hTi
+
+(cid:9)2(cid:9)hT j
+(cid:9)2.
+|(cid:7)WhTi
+, WhT j
+(cid:7)
+(cid:9)2 we therefore get that
+2(cid:9)hT0,1
+(cid:9)WhT0,1
+(cid:9)hT j
+≤
+(cid:9)2
+
+√
+2(cid:2)(cid:9)hT0,1
+
+(cid:9)2
+
+2
+
+(cid:9)2.
+
+j≥2
+
+(23.7)
+
+(23.8)
+
+(23.9)
+
+Combining this with Equation (23.6) and Equation (23.9) we obtain
+
+2
+
+≤
+
+(cid:9)2
+
+(1− (cid:2))(cid:9)hT0,1
+Rearranging the inequality gives
+(cid:9)hT0,1
+
+√
+2(cid:2)(cid:9)hT0,1
+√
+2(cid:2)
+1− (cid:2)
+Finally, using Equation (23.8) we get that
+(cid:9)1 + 2(cid:9)xT c
+
+(cid:9)2 ≤
+
+(cid:9)hT0,1
+but since (cid:9)hT0
+
+(cid:9)2 ≤ ρs
+(cid:9)2 ≤ (cid:9)hT0,1
+
+−1/2 ((cid:9)hT0
+(cid:9)2 this implies
+
+s
+
+0
+
+(cid:9)2s
+
+−1/2(cid:9)hT c
+
+0
+
+(cid:9)1.
+
+−1/2(cid:9)hT c
+
+(cid:9)1.
+
+0
+
+(cid:9)1) ≤ ρ(cid:9)hT0
+
+(cid:9)2 + 2ρs
+
+−1/2(cid:9)xT c
+
+0
+
+(cid:9)1,
+
+(cid:9)hT0,1
+
+(cid:9)2 ≤ 2ρ
+1− ρ
+
+−1/2(cid:9)xT c
+
+0
+
+s
+
+(cid:9)1,
+
+which concludes the proof of the second claim.
+
+Downloaded from https:/www.cambridge.org/core. SUNY Buffalo State, on 28 Feb 2017 at 10:41:37, subject to the Cambridge Core terms of use, available at
+https:/www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.024
+
+290
+
+Dimensionality Reduction
+
+Proof of Theorem 23.9
+To prove the theorem we follow an approach due to (Baraniuk, Davenport, DeVore
+& Wakin 2008). The idea is to combine the Johnson-Lindenstrauss (JL) lemma with
+a simple covering argument.
+
+We start with a covering property of the unit ball.
+
+Lemma 23.11 Let (cid:2) ∈ (0,1). There exists a ﬁnite set Q ⊂ Rd of size |Q| ≤
+that
+
+(cid:16)
+
+(cid:17)d
+
+3
+(cid:2)
+
+such
+
+sup
+x:(cid:9)x(cid:9)≤1
+Proof. Let k be an integer and let
+
+min
+v∈Q
+
+(cid:9)x− v(cid:9) ≤ (cid:2).
+
+(cid:3) = {x ∈ Rd : ∀ j ∈ [d],∃i ∈ {−k,−k + 1, . . . ,k} s.t. x j = i
+
+Q
+(cid:3)| = (2k + 1)d. We shall set Q = Q
+
+Clearly, |Q
+of Rd. Since the points in Q
+is the size of Q
+volume of the (cid:9)∞ ball is 2d and the volume of B2(1) is
+
+(cid:3) ∩ B2(1), where B2(1) is the unit (cid:9)2 ball
+are distributed evenly on the unit (cid:9)∞ ball, the size of Q
+times the ratio between the volumes of the unit (cid:9)2 and (cid:9)∞ balls. The
+
+}.
+
+k
+
+(cid:3)
+
+(cid:3)
+
+π d/2
+
+(cid:26)(1+ d/2)
+
+.
+
+For simplicity, assume that d is even and therefore
+
+(cid:26)(1+ d/2) = (d/2)! ≥
+
+(cid:16)
+
+(cid:17)d/2
+
+,
+
+d/2
+e
+
+where in the last inequality we used Stirling’s approximation. Overall we obtained
+that
+
+|Q| ≤ (2k + 1)d (π/e)d/2 (d/2)
+
+−d/2 2
+
+−d.
+
+(23.10)
+Now let us specify k. For each x ∈ B2(1) let v ∈ Q be the vector whose ith element is
+sign(xi )(cid:27)|xi| k(cid:28)/k. Then, for each element we have that |xi − vi| ≤ 1/k and thus
+
+(cid:9)x− v(cid:9) ≤
+
+√
+d
+k
+
+.
+
+To ensure that the right-hand side will be at most (cid:2) we shall set k =(cid:24)√
+d/(cid:2)(cid:25). Plugging
+(cid:17)d
+(cid:17)d ≤
+(cid:16)
+
+this value into Equation (23.10) we conclude that
+
+√
+d/(2(cid:2)))d (π/e)d/2 (d/2)
+
+|Q| ≤ (3
+
+−d/2 =
+
+(cid:31)
+
+(cid:16)
+
+.
+
+3
+(cid:2)
+
+3
+(cid:2)
+
+π
+2e
+
+Let x be a vector that can be written as x = U α with U being some orthonormal
+matrix and (cid:9)α(cid:9)0 ≤ s. Combining the earlier covering property and the JL lemma
+(Lemma 23.4) enables us to show that a random W will not distort any such x.
+Lemma 23.12 Let U be an orthonormal d × d matrix and let I ⊂ [d] be a set of
+indices of size |I| = s. Let S be the span of {Ui : i ∈ I}, where Ui is the ith column of
+U. Let δ ∈ (0,1), (cid:2) ∈ (0,1), and n ∈ N such that
+
+n ≥ 24
+
+log(2/δ)+ s log(12/(cid:2))
+
+.
+
+(cid:2)2
+
+Downloaded from https:/www.cambridge.org/core. SUNY Buffalo State, on 28 Feb 2017 at 10:41:37, subject to the Cambridge Core terms of use, available at
+https:/www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.024
+
+23.3 Compressed Sensing
+Then, with probability of at least 1 − δ over a choice of a random matrix W ∈ Rn,d
+such that each element of W is independently distributed according to N(0,1/n), we
+have
+
+291
+
+(cid:14)(cid:14)(cid:14)(cid:14)(cid:9)Wx(cid:9)
+(cid:9)x(cid:9) − 1
+
+(cid:14)(cid:14)(cid:14)(cid:14) < (cid:2).
+
+sup
+x∈S
+
+Proof. It sufﬁces to prove the lemma for all x∈ S with (cid:9)x(cid:9)= 1. We can write x= UI α
+where α ∈ Rs, (cid:9)α(cid:9)2 = 1, and UI is the matrix whose columns are {Ui : i ∈ I}. Using
+Lemma 23.11 we know that there exists a set Q of size |Q| ≤ (12/(cid:2))s such that
+
+Applying Lemma 23.4 on the set {UI v : v ∈ Q} we obtain that for n satisfying the
+condition given in the lemma, the following holds with probability of at least 1− δ:
+
+But since U is orthogonal we also have that
+
+(cid:9)α − v(cid:9) ≤ ((cid:2)/4).
+
+sup
+α:(cid:9)α(cid:9)=1
+
+min
+v∈Q
+
+(cid:9)UI α − UI v(cid:9) ≤ ((cid:2)/4).
+
+sup
+α:(cid:9)α(cid:9)=1
+
+min
+v∈Q
+
+− 1
+
+(cid:9)UI v(cid:9)2
+
+(cid:14)(cid:14)(cid:14)(cid:14)(cid:14) ≤ (cid:2)/2,
+(cid:14)(cid:14)(cid:14)(cid:14) ≤ (cid:2)/2.
+
+(cid:14)(cid:14)(cid:14)(cid:14)(cid:14)(cid:9)WUI v(cid:9)2
+(cid:14)(cid:14)(cid:14)(cid:14)(cid:9)WUI v(cid:9)
+(cid:9)UI v(cid:9) − 1
+(cid:9)Wx(cid:9)
+(cid:9)x(cid:9) ≤ 1+ a.
+
+sup
+v∈Q
+
+sup
+v∈Q
+
+This also implies that
+
+Let a be the smallest number such that
+∀x ∈ S,
+
+Clearly a < ∞. Our goal is to show that a ≤ (cid:2). This follows from the fact that for any
+x ∈ S of unit norm there exists v ∈ Q such that (cid:9)x− UI v(cid:9) ≤ (cid:2)/4 and therefore
+
+(cid:9)Wx(cid:9) ≤ (cid:9)WUI v(cid:9)+(cid:9)W (x− UI v)(cid:9) ≤ 1+ (cid:2)/2+ (1+ a)(cid:2)/4.
+
+Thus,
+
+∀x ∈ S,
+
+But the deﬁnition of a implies that
+
+(cid:9)x(cid:9) ≤ 1+(cid:3)
+
+(cid:9)Wx(cid:9)
+
+(cid:4)
+
+(cid:2)/2+ (1+ a)(cid:2)/4
+
+.
+
+a ≤ (cid:2)/2+ (1+ a)(cid:2)/4 ⇒ a ≤ (cid:2)/2+ (cid:2)/4
+1− (cid:2)/4
+
+≤ (cid:2).
+
+This proves that for all x ∈ S we have
+as well since
+
+(cid:9)W x(cid:9)
+(cid:9)x(cid:9) − 1 ≤ (cid:2). The other side follows from this
+
+(cid:9)Wx(cid:9) ≥ (cid:9)WUI v(cid:9)−(cid:9)W (x− UI v)(cid:9) ≥ 1− (cid:2)/2− (1+ (cid:2))(cid:2)/4 ≥ 1− (cid:2).
+
+The preceding lemma tells us that for x ∈ S of unit norm we have
+
+(1− (cid:2)) ≤ (cid:9)Wx(cid:9) ≤ (1+ (cid:2)),
+
+Downloaded from https:/www.cambridge.org/core. SUNY Buffalo State, on 28 Feb 2017 at 10:41:37, subject to the Cambridge Core terms of use, available at
+https:/www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.024
+
+292
+
+Dimensionality Reduction
+
+which implies that
+
+(1− 2 (cid:2)) ≤ (cid:9)Wx(cid:9)2 ≤ (1+ 3 (cid:2)).
+
+The proof of Theorem 23.9 follows from this by a union bound over all choices of I .
+
+23.4 PCA OR COMPRESSED SENSING?
+Suppose we would like to apply a dimensionality reduction technique to a given set
+of examples. Which method should we use, PCA or compressed sensing? In this
+section we tackle this question, by underscoring the underlying assumptions behind
+the two methods.
+
+It is helpful ﬁrst to understand when each of the methods can guarantee per-
+fect recovery. PCA guarantees perfect recovery whenever the set of examples is
+contained in an n dimensional subspace of Rd. Compressed sensing guarantees
+perfect recovery whenever the set of examples is sparse (in some basis). On the
+basis of these observations, we can describe cases in which PCA will be better than
+compressed sensing and vice versa.
+
+As a ﬁrst example, suppose that the examples are the vectors of the standard
+basis of Rd, namely, e1, . . . ,ed, where each ei is the all zeros vector except 1 in the ith
+coordinate. In this case, the examples are 1-sparse. Hence, compressed sensing will
+yield a perfect recovery whenever n ≥ (cid:6)(log(d)). On the other hand, PCA will lead
+to poor performance, since the data is far from being in an n dimensional subspace,
+as long as n < d. Indeed, it is easy ro verify that in such a case, the averaged recovery
+error of PCA (i.e., the objective of Equation (23.1) divided by m) will be (d − n)/d,
+which is larger than 1/2 whenever n ≤ d/2.
+
+We next show a case where PCA is better than compressed sensing. Consider
+m examples that are exactly on an n dimensional subspace. Clearly, in such a case,
+PCA will lead to perfect recovery. As to compressed sensing, note that the exam-
+ples are n-sparse in any orthonormal basis whose ﬁrst n vectors span the subspace.
+Therefore, compressed sensing would also work if we will reduce the dimension
+to (cid:6)(n log(d)). However, with exactly n dimensions, compressed sensing might
+fail. PCA has also better resilience to certain types of noise. See (Chang, Weiss
+& Freeman 2009) for a discussion.
+
+23.5 SUMMARY
+We introduced two methods for dimensionality reduction using linear transforma-
+tions: PCA and random projections. We have shown that PCA is optimal in the
+sense of averaged squared reconstruction error, if we restrict the reconstruction pro-
+cedure to be linear as well. However, if we allow nonlinear reconstruction, PCA is
+not necessarily the optimal procedure. In particular, for sparse data, random projec-
+tions can signiﬁcantly outperform PCA. This fact is at the heart of the compressed
+sensing method.
+
+23.6 BIBLIOGRAPHIC REMARKS
+PCA is equivalent to best subspace approximation using singular value decompo-
+sition (SVD). The SVD method is described in Appendix C. SVD dates back to
+
+Downloaded from https:/www.cambridge.org/core. SUNY Buffalo State, on 28 Feb 2017 at 10:41:37, subject to the Cambridge Core terms of use, available at
+https:/www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.024
+
+23.7 Exercises
+
+293
+
+Eugenio Beltrami (1873) and Camille Jordan (1874). It has been rediscovered many
+times. In the statistical literature, it was introduced by Pearson (1901). Besides PCA
+and SVD, there are additional names that refer to the same idea and are being
+used in different scientiﬁc communities. A few examples are the Eckart-Young the-
+orem (after Carl Eckart and Gale Young who analyzed the method in 1936), the
+Schmidt-Mirsky theorem, factor analysis, and the Hotelling transform.
+
+Compressed sensing was introduced in Donoho (2006) and in (Candes & Tao
+
+2005). See also Candes (2006).
+
+23.7 EXERCISES
+23.1 In this exercise we show that in the general case, exact recovery of a linear
+compression scheme is impossible.
+1. let A ∈ Rn,d be an arbitrary compression matrix where n ≤ d−1. Show that there
+
+2. Conclude that exact recovery of a linear compression scheme is impossible.
+
+23.2 Let α ∈ Rd such that α1 ≥ α2 ≥ ··· ≥ αd ≥ 0. Show that
+
+exists u,v ∈ Rn, u (cid:18)= v such that Au = Av.
+d(cid:7)
+
+α j β j = n(cid:7)
+
+α j .
+
+j=1
+
+max
+
+β∈[0,1]d :(cid:9)β(cid:9)1≤n
+
+j=1
+
+23.3 Kernel PCA:
+
+Hint: Take every vector β ∈ [0,1]d such that (cid:9)β(cid:9)1 ≤ n. Let i be the minimal index
+for which βi < 1. If i = n + 1 we are done. Otherwise, show that we can increase βi ,
+while possibly decreasing β j for some j > i, and obtain a better solution. This will
+imply that the optimal solution is to set βi = 1 for i ≤ n and βi = 0 for i > n.
+
+In this exercise we show how PCA can be used for construct-
+ing nonlinear dimensionality reduction on the basis of the kernel trick (see
+Chapter 16).
+Let X be some instance space and let S = {x1, . . . ,xm} be a set of points in X .
+Consider a feature mapping ψ : X → V , where V is some Hilbert space (possi-
+bly of inﬁnite dimension). Let K : X × X be a kernel function, that is, k(x,x(cid:3)
+) =
+)(cid:8). Kernel PCA is the process of mapping the elements in S into V
+(cid:7)ψ(x), ψ(x
+(cid:3)
+using ψ, and then applying PCA over {ψ(x1), . . . , ψ(xm)} into Rn. The output of
+this process is the set of reduced elements.
+Show how this process can be done in polynomial time in terms of m and n,
+assuming that each evaluation of K (·,·) can be calculated in a constant time. In
+particular, if your implementation requires multiplication of two matrices A and
+B, verify that their product can be computed. Similarly, if an eigenvalue decom-
+position of some matrix C is required, verify that this decomposition can be
+computed.
+
+23.4 An Interpretation of PCA as Variance Maximization:
+
+Let x1, . . . ,xm be m vectors in Rd, and let x be a random vector distributed according
+to the uniform distribution over x1, . . . ,xm. Assume that E [x] = 0.
+1. Consider the problem of ﬁnding a unit vector, w ∈ Rd, such that the ran-
+dom variable (cid:7)w,x(cid:8) has maximal variance. That is, we would like to solve the
+problem
+
+argmax
+w:(cid:9)w(cid:9)=1
+
+Var[(cid:7)w,x(cid:8)] = argmax
+w:(cid:9)w(cid:9)=1
+
+1
+m
+
+((cid:7)w,xi(cid:8))2.
+
+m(cid:7)
+
+i=1
+
+Downloaded from https:/www.cambridge.org/core. SUNY Buffalo State, on 28 Feb 2017 at 10:41:37, subject to the Cambridge Core terms of use, available at
+https:/www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.024
+
+294
+
+Dimensionality Reduction
+
+Show that the solution of the problem is to set w to be the ﬁrst principle vector
+of x1, . . . ,xm.
+2. Let w1 be the ﬁrst principal component as in the previous question. Now, sup-
+pose we would like to ﬁnd a second unit vector, w2 ∈ Rd, that maximizes the
+variance of (cid:7)w2,x(cid:8), but is also uncorrelated to (cid:7)w1,x(cid:8). That is, we would like to
+solve
+
+argmax
+
+w:(cid:9)w(cid:9)=1, E[((cid:7)w1 ,x(cid:8))((cid:7)w,x(cid:8))]=0
+
+Var[(cid:7)w,x(cid:8)].
+
+Show that the solution to this problem is to set w to be the second principal
+component of x1, . . . ,xm.
+Hint: Note that
+
+where A =(cid:2)
+
+E[((cid:7)w1,x(cid:8))((cid:7)w,x(cid:8))] = w
+(cid:12)
+i . Since w is an eigenvector of A we have that the constraint
+i xi x
+
+]w = mw
+
+(cid:12)
+1 Aw,
+
+(cid:12)
+E[xx
+
+(cid:12)
+1
+
+E[((cid:7)w1,x(cid:8))((cid:7)w,x(cid:8))] = 0 is equivalent to the constraint
+
+(cid:7)w1,w(cid:8) = 0.
+
+23.5 The Relation between SVD and PCA: Use the SVD theorem (Corollary C.6) for
+
+providing an alternative proof of Theorem 23.2.
+
+23.6 Random Projections Preserve Inner Products: The Johnson-Lindenstrauss lemma
+tells us that a random projection preserves distances between a ﬁnite set of vectors.
+In this exercise you need to prove that if the set of vectors are within the unit ball,
+then not only are the distances between any two vectors preserved, but the inner
+product is also preserved.
+Let Q be a ﬁnite set of vectors in Rd and assume that for every x ∈ Q we have
+(cid:9)x(cid:9) ≤ 1.
+1. Let δ ∈ (0,1) and n be an integer such that
+
++
+
+(cid:2) =
+
+6log(|Q|2/δ)
+
+≤ 3.
+
+n
+
+|(cid:7)W u, W v(cid:8)−(cid:7)u,v(cid:8)| ≤ (cid:2)
+
+Prove that with probability of at least 1 − δ over a choice of a random matrix
+W ∈ Rn,d, where each element of W is independently distributed according to
+N (0,1/n), we have
+for every u,v ∈ Q.
+Hint: Use JL to bound both
+2. (*) Let x1, . . . ,xm be a set of vectors in Rd of norm at most 1, and assume that
+these vectors are linearly separable with margin of γ . Assume that d & 1/γ 2.
+Show that there exists a constant c > 0 such that if we randomly project these
+vectors into Rn, for n = c/γ 2, then with probability of at least 99% it holds that
+the projected vectors are linearly separable with margin γ /2.
+
+(cid:9)W (u−v)(cid:9)
+(cid:9)u−v(cid:9)
+
+(cid:9)W (u+v)(cid:9)
+(cid:9)u+v(cid:9)
+
+and
+
+.
+
+Downloaded from https:/www.cambridge.org/core. SUNY Buffalo State, on 28 Feb 2017 at 10:41:37, subject to the Cambridge Core terms of use, available at
+https:/www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.024
+
+

@@ -1,0 +1,1119 @@
+19
+
+Nearest Neighbor
+
+Nearest Neighbor algorithms are among the simplest of all machine learning algo-
+rithms. The idea is to memorize the training set and then to predict the label of
+any new instance on the basis of the labels of its closest neighbors in the training
+set. The rationale behind such a method is based on the assumption that the fea-
+tures that are used to describe the domain points are relevant to their labelings in a
+way that makes close-by points likely to have the same label. Furthermore, in some
+situations, even when the training set is immense, ﬁnding a nearest neighbor can
+be done extremely fast (for example, when the training set is the entire Web and
+distances are based on links).
+
+Note that, in contrast with the algorithmic paradigms that we have discussed
+so far, like ERM, SRM, MDL, or RLM, that are determined by some hypothesis
+class, H, the Nearest Neighbor method ﬁgures out a label on any test point without
+searching for a predictor within some predeﬁned class of functions.
+
+In this chapter we describe Nearest Neighbor methods for classiﬁcation and
+regression problems. We analyze their performance for the simple case of binary
+classiﬁcation and discuss the efﬁciency of implementing these methods.
+
+19.1 k NEAREST NEIGHBORS
+Throughout the entire chapter we assume that our instance domain, X , is endowed
+with a metric function ρ. That is, ρ :X ×X → R is a function that returns the distance
+between any two elements of X . For example, if X = Rd then ρ can be the Euclidean
+distance, ρ(x,x(cid:3)
+Let S = (x1, y1), . . . ,(xm , ym) be a sequence of training examples. For each x ∈ X ,
+let π1(x), . . . , πm(x) be a reordering of {1, . . . ,m} according to their distance to x,
+ρ(x,xi ). That is, for all i < m,
+
+) = (cid:9)x− x(cid:3)(cid:9) =
+
+i=1 (xi − x
+
+(cid:31)(cid:2)
+
+(cid:3)
+i)2.
+
+d
+
+ρ(x,xπi (x)) ≤ ρ(x,xπi+1(x)).
+
+Downloaded from https://www.cambridge.org/core. YBP Library Services, on 13 Aug 2018 at 02:26:22, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.020
+
+219
+
+220
+
+Nearest Neighbor
+
+Figure 19.1. An illustration of the decision boundaries of the 1-NN rule. The points
+depicted are the sample points, and the predicted label of any new point will be the
+label of the sample point in the center of the cell it belongs to. These cells are called a
+Voronoi Tessellation of the space.
+
+For a number k, the k-NN rule for binary classiﬁcation is deﬁned as follows:
+
+k-NN
+
+input: a training sample S = (x1, y1), . . . ,(xm , ym)
+output: for every point x ∈ X ,
+return the majority label among {yπi (x) : i ≤ k}
+
+When k = 1, we have the 1-NN rule:
+
+h S(x) = yπ1(x).
+
+A geometric illustration of the 1-NN rule is given in Figure 19.1.
+For regression problems, namely, Y = R, one can deﬁne the prediction to be
+the average target of the k nearest neighbors. That is, h S(x) = 1
+k
+i=1 yπi (x). More
+(cid:4)
+generally, for some function φ : (X ×Y)k → Y, the k-NN rule with respect to φ is:
+(19.1)
+
+(xπ1(x), yπ1(x)), . . . ,(xπk (x), yπk (x))
+
+h S(x) = φ
+
+(cid:3)
+
+.
+
+k
+
+(cid:2)
+
+It is easy to verify that we can cast the prediction by majority of labels (for clas-
+siﬁcation) or by the averaged target (for regression) as in Equation (19.1) by an
+appropriate choice of φ. The generality can lead to other rules; for example, if Y = R,
+we can take a weighted average of the targets according to the distance from x:
+
+h S(x) = k(cid:7)
+
+(cid:2)
+
+i=1
+
+ρ(x,xπi (x))
+k
+j=1
+
+ρ(x,xπ j (x))
+
+yπi (x).
+
+19.2 ANALYSIS
+Since the NN rules are such natural learning methods, their generalization proper-
+ties have been extensively studied. Most previous results are asymptotic consistency
+results, analyzing the performance of NN rules when the sample size, m, goes to
+inﬁnity, and the rate of convergence depends on the underlying distribution. As we
+have argued in Section 7.4, this type of analysis is not satisfactory. One would like to
+learn from ﬁnite training samples and to understand the generalization performance
+as a function of the size of such ﬁnite training sets and clear prior assumptions on
+the data distribution. We therefore provide a ﬁnite-sample analysis of the 1-NN rule,
+
+Downloaded from https://www.cambridge.org/core. YBP Library Services, on 13 Aug 2018 at 02:26:22, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.020
+
+19.2 Analysis
+
+221
+
+showing how the error decreases as a function of m and how it depends on proper-
+ties of the distribution. We will also explain how the analysis can be generalized to
+k-NN rules for arbitrary values of k. In particular, the analysis speciﬁes the number
+of examples required to achieve a true error of 2LD(h(cid:7))+ (cid:2), where h(cid:7) is the Bayes
+optimal hypothesis, assuming that the labeling rule is “well behaved" (in a sense we
+will deﬁne later).
+
+19.2.1 A Generalization Bound for the 1-NN Rule
+We now analyze the true error of the 1-NN rule for binary classiﬁcation with the 0-1
+loss, namely, Y = {0,1} and (cid:9)(h,(x, y)) = 1[h(x)(cid:18)=y]. We also assume throughout the
+analysis that X = [0,1]d and ρ is the Euclidean distance.
+We start by introducing some notation. Let D be a distribution over X ×Y. Let
+DX denote the induced marginal distribution over X and let η : Rd → R be the
+conditional probability1 over the labels, that is,
+
+η(x) = P[y = 1|x].
+
+Recall that the Bayes optimal rule (that is, the hypothesis that minimizes LD(h) over
+all functions) is
+
+h(cid:7)(x) = 1[η(x)>1/2].
+
+We assume that the conditional probability function η is c-Lipschitz for some
+c > 0: Namely, for all x,x(cid:3) ∈ X ,
+)| ≤ c(cid:9)x − x(cid:3)(cid:9). In other words, this
+assumption means that if two vectors are close to each other then their labels are
+likely to be the same.
+
+|η(x) − η(x(cid:3)
+
+The following lemma applies the Lipschitzness of the conditional probability
+function to upper bound the true error of the 1-NN rule as a function of the expected
+distance between each test instance and its nearest neighbor in the training set.
+Lemma 19.1. Let X = [0,1]d,Y = {0,1}, and D be a distribution over X × Y
+is a c-Lipschitz function. Let
+for which the conditional probability function, η,
+S = (x1, y1), . . . ,(xm , ym) be an i.i.d. sample and let h S be its corresponding 1-NN
+hypothesis. Let h(cid:7) be the Bayes optimal rule for η. Then,
+
+[LD(h S)] ≤ 2 LD(h(cid:7))+ c
+
+S∼Dm,x∼D [(cid:9)x− xπ1(x)(cid:9)].
+
+E
+
+E
+S∼Dm
+
+Proof. Since LD(h S) = E(x,y)∼D [1[h S(x)(cid:18)=y]], we obtain that ES [LD(h S)] is the prob-
+ability to sample a training set S and an additional example (x, y), such that the
+label of π1(x) is different from y. In other words, we can ﬁrst sample m unlabeled
+examples, Sx = (x1, . . . ,xm), according to DX , and an additional unlabeled example,
+x ∼ DX , then ﬁnd π1(x) to be the nearest neighbor of x in Sx, and ﬁnally sample
+
+1 Formally, P[y = 1|x] = limδ→0
+around x.
+
+D({(x(cid:3) ,1):x(cid:3)∈B(x,δ)})
+
+D({(x(cid:3) ,y):x(cid:3)∈B(x,δ),y∈Y}) , where B(x, δ) is a ball of radius δ centered
+
+Downloaded from https://www.cambridge.org/core. YBP Library Services, on 13 Aug 2018 at 02:26:22, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.020
+
+222
+
+Nearest Neighbor
+
+y ∼ η(x) and yπ1(x) ∼ η(π1(x)). It follows that
+(cid:24)
+
+[LD(h S)] =
+
+E
+S
+
+E
+
+Sx∼DmX ,x∼DX ,y∼η(x),y(cid:3)∼η(π1(x))
+
+[1[y(cid:18)=y(cid:3)]]
+
+(cid:25)
+
+P
+
+[y (cid:18)= y
+
+(cid:3)
+
+]
+
+.
+
+=
+
+E
+
+Sx∼DmX ,x∼DX
+We next upper bound Py∼η(x),y(cid:3)∼η(x(cid:3)) [y (cid:18)= y
+
+y∼η(x),y(cid:3)∼η(π1(x))
+(cid:3)
+] for any two domain points x,x(cid:3)
+
+(19.2)
+
+:
+
+P
+
+y∼η(x),y(cid:3)∼η(x(cid:3))
+
+[y (cid:18)= y
+
+(cid:3)
+
+(cid:3)
+
+(cid:3)
+
+)(1− η(x))+ (1− η(x
+
+] = η(x
+))η(x)
+= (η(x)− η(x)+ η(x
+))(1− η(x))
++ (1− η(x)+ η(x)− η(x
+))η(x)
+= 2η(x)(1− η(x))+ (η(x)− η(x
+(cid:3)
+
+(cid:3)
+
+(cid:3)
+
+))(2η(x)− 1).
+
+Using |2η(x) − 1| ≤ 1 and the assumption that η is c-Lipschitz, we obtain that the
+probability is at most:
+
+P
+
+y∼η(x),y(cid:3)∼η(x(cid:3))
+
+[y (cid:18)= y
+
+(cid:3)
+
+] ≤ 2η(x)(1− η(x))+ c(cid:9)x− x
+
+(cid:3)(cid:9).
+
+Plugging this into Equation (19.2) we conclude that
+
+[LD(h S)] ≤ E
+
+x
+
+E
+S
+
+[2η(x)(1− η(x))]+ c E
+
+S,x
+
+[(cid:9)x− xπ1(x)(cid:9)].
+
+Finally, the error of the Bayes optimal classiﬁer is
+
+LD(h(cid:7)) = E
+
+x
+
+[min{η(x),1− η(x)}] ≥ E
+
+x
+
+[η(x)(1− η(x))].
+
+Combining the preceding two inequalities concludes our proof.
+
+The next step is to bound the expected distance between a random x and its
+closest element in S. We ﬁrst need the following general probability lemma. The
+lemma bounds the probability weight of subsets that are not hit by a random sample,
+as a function of the size of that sample.
+Lemma 19.2. Let C1, . . . ,Cr be a collection of subsets of some domain set, X . Let S
+be a sequence of m points sampled i.i.d. according to some probability distribution, D
+over X . Then,
+
+Proof. From the linearity of expectation, we can rewrite:
+
+⎤
+⎦ ≤ r
+
+.
+
+m e
+
+P[Ci]
+
+⎡
+⎣ (cid:7)
+⎤
+⎦ = r(cid:7)
+
+i:Ci∩S=∅
+
+P[Ci ]
+
+(cid:29)
+
+(cid:30)
+
+.
+
+P[Ci ] E
+S
+
+1[Ci∩S=∅]
+
+i=1
+
+[Ci ∩ S = ∅] = (1− P[Ci ])m ≤ e
+
+− P[Ci ]m.
+
+E
+S∼Dm
+
+E
+S
+
+⎡
+⎣ (cid:7)
+(cid:30) = P
+
+i:Ci∩S=∅
+
+S
+
+(cid:29)
+
+Next, for each i we have
+1[Ci∩S=∅]
+
+E
+S
+
+Downloaded from https://www.cambridge.org/core. YBP Library Services, on 13 Aug 2018 at 02:26:22, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.020
+
+19.2 Analysis
+
+223
+
+Combining the preceding two equations we get
+
+⎡
+⎣ (cid:7)
+
+E
+S
+
+i:Ci∩S=∅
+
+P[Ci ]
+
+⎤
+⎦ ≤ r(cid:7)
+
+i=1
+
+P[Ci] e
+
+− P[Ci ]m ≤ r max
+
+i
+
+P[Ci] e
+
+− P[Ci ]m.
+
+Finally, by a standard calculus, maxa ae
+
+−ma ≤ 1
+
+me and this concludes the proof.
+
+Equipped with the preceding lemmas we are now ready to state and prove the
+main result of this section – an upper bound on the expected error of the 1-NN
+learning rule.
+Theorem 19.3. Let X = [0,1]d,Y = {0,1}, and D be a distribution over X × Y for
+which the conditional probability function, η, is a c-Lipschitz function. Let h S denote
+the result of applying the 1-NN rule to a sample S ∼ Dm. Then,
+− 1
+d+1 .
+
+[LD(h S)] ≤ 2 LD(h(cid:7))+ 4 c
+
+√
+d m
+
+E
+S∼Dm
+
+Proof. Fix some (cid:2) = 1/T , for some integer T , let r = T d and let C1, . . . ,Cr be the
+cover of the set X using boxes of length (cid:2): Namely, for every (α1, . . . , αd ) ∈ [T ]d,
+there exists a set Ci of the form {x : ∀ j , x j ∈ [(α j − 1)/T , α j /T ]}. An illustration for
+d = 2, T = 5 and the set corresponding to α = (2,4) is given in the following.
+
+1
+
+in the same box we have (cid:9)x − x(cid:3)(cid:9) ≤ √
+
+1
+
+For each x,x(cid:3)
+Therefore,
+
+[(cid:9)x− xπ1(x)(cid:9)] ≤ E
+
+S
+
+E
+x,S
+
+⎡
+⎣P
+
+⎡
+⎣ (cid:6)
+
+Ci
+
+i:Ci∩S=∅
+
+d.
+
+⎤
+⎦ ,
+
+⎤
+⎦ (cid:2)
+
+d (cid:2). Otherwise, (cid:9)x − x(cid:3)(cid:9) ≤ √
+⎡
+⎣ (cid:6)
+(cid:28)
+i:Ci∩S(cid:18)=∅
+i:Ci∩S(cid:18)=∅ Ci ]≤ 1 we get that
+(cid:4)
+
+√
+d
+
+Ci
+
+⎤
+⎦√
+d + P
+(cid:3)
+
+and by combining Lemma 19.2 with the trivial bound P[
++ (cid:2)
+
+[(cid:9)x− xπ1(x)(cid:9)] ≤
+
+√
+d
+
+r
+me
+
+.
+
+E
+x,S
+
+(cid:16)
+Since the number of boxes is r = (1/(cid:2))d we get that
+2d (cid:2)−d
+m e
+
+[(cid:9)x− xπ1(x)(cid:9)] ≤
+
+√
+d
+
+(cid:17)
+
+.
+
++ (cid:2)
+
+E
+S,x
+
+Combining the preceding with Lemma 19.1 we obtain that
+
+[LD(h S)] ≤ 2 LD(h(cid:7))+ c
+
+E
+S
+
+2d (cid:2)−d
+m e
+
++ (cid:2)
+
+(cid:16)
+
+√
+d
+
+(cid:17)
+
+.
+
+Downloaded from https://www.cambridge.org/core. YBP Library Services, on 13 Aug 2018 at 02:26:22, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.020
+
+224
+
+Nearest Neighbor
+Finally, setting (cid:2) = 2 m
+
+−1/(d+1) and noting that
+−d md/(d+1)
+m e
+
++ (cid:2) = 2d 2
+
+2d (cid:2)−d
+m e
+
++ 2 m
+
+−1/(d+1)
+
+= m
+
+−1/(d+1)(1/e+ 2) ≤ 4m
+
+−1/(d+1)
+
+we conclude our proof.
+
+the expected error of the k-NN rule converges to (1 +√
+
+The theorem implies that if we ﬁrst ﬁx the data-generating distribution and
+then let m go to inﬁnity, then the error of the 1-NN rule converges to twice the
+Bayes error. The analysis can be generalized to larger values of k, showing that
+8/k) times the error of the
+Bayes classiﬁer. This is formalized in Theorem 19.5, whose proof is left as a guided
+exercise.
+
+19.2.2 The “Curse of Dimensionality”
+The upper bound given in Theorem 19.3 grows with c (the Lipschitz coefﬁcient of η)
+and with d, the Euclidean dimension of the domain set X . In fact, it is easy to see that
+√
+a necessary condition for the last term in Theorem 19.3 to be smaller than (cid:2) is that
+m ≥ (4 c
+d/(cid:2))d+1. That is, the size of the training set should increase exponentially
+with the dimension. The following theorem tells us that this is not just an artifact
+of our upper bound, but, for some distributions, this amount of examples is indeed
+necessary for learning with the NN rule.
+
+Theorem 19.4. For any c > 1, and every learning rule, L, there exists a distribution
+over [0,1]d ×{0,1}, such that η(x) is c-Lipschitz, the Bayes error of the distribution is
+0, but for sample sizes m ≤ (c + 1)d /2, the true error of the rule L is greater than 1/4.
+
+Proof. Fix any values of c and d. Let Gd
+c be the grid on [0,1]d with distance of
+1/c between points on the grid. That is, each point on the grid is of the form
+(a1/c, . . . ,ad /c) where ai is in {0, . . . ,c− 1,c}. Note that, since any two distinct points
+→ [0,1] is a c-Lipschitz
+on this grid are at least 1/c apart, any function η : G D
+C
+function. It follows that the set of all c-Lipschitz functions over Gd
+c contains the
+set of all binary valued functions over that domain. We can therefore invoke the
+No-Free-Lunch result (Theorem 5.1) to obtain a lower bound on the needed sam-
+ple sizes for learning that class. The number of points on the grid is (c + 1)d; hence,
+if m < (c + 1)d /2, Theorem 5.1 implies the lower bound we are after.
+
+The exponential dependence on the dimension is known as the curse of dimen-
+sionality. As we saw, the 1-NN rule might fail if the number of examples is smaller
+than (cid:6)((c + 1)d). Therefore, while the 1-NN rule does not restrict itself to a prede-
+ﬁned set of hypotheses, it still relies on some prior knowledge – its success depends
+on the assumption that the dimension and the Lipschitz constant of the underlying
+distribution, η, are not too high.
+
+Downloaded from https://www.cambridge.org/core. YBP Library Services, on 13 Aug 2018 at 02:26:22, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.020
+
+19.6 Exercises
+
+225
+
+19.3 EFFICIENT IMPLEMENTATION*
+Nearest Neighbor is a learning-by-memorization type of rule. It requires the entire
+training data set to be stored, and at test time, we need to scan the entire data set in
+order to ﬁnd the neighbors. The time of applying the NN rule is therefore (cid:14)(d m).
+This leads to expensive computation at test time.
+
+When d is small, several results from the ﬁeld of computational geometry have
+proposed data structures that enable to apply the NN rule in time o(d O(1) log(m)).
+However, the space required by these data structures is roughly m O(d), which makes
+these methods impractical for larger values of d.
+
+To overcome this problem, it was suggested to improve the search method by
+allowing an approximate search. Formally, an r-approximate search procedure is
+guaranteed to retrieve a point within distance of at most r times the distance to the
+nearest neighbor. Three popular approximate algorithms for NN are the kd-tree,
+balltrees, and locality-sensitive hashing (LSH). We refer the reader, for example, to
+(Shakhnarovich, Darrell & Indyk 2006).
+
+19.4 SUMMARY
+The k-NN rule is a very simple learning algorithm that relies on the assumption
+that “things that look alike must be alike.” We formalized this intuition using the
+Lipschitzness of the conditional probability. We have shown that with a sufﬁciently
+large training set, the risk of the 1-NN is upper bounded by twice the risk of the
+Bayes optimal rule. We have also derived a lower bound that shows the “curse of
+dimensionality” – the required sample size might increase exponentially with the
+dimension. As a result, NN is usually performed in practice after a dimensionality
+reduction preprocessing step. We discuss dimensionality reduction techniques later
+on in Chapter 23.
+
+19.5 BIBLIOGRAPHIC REMARKS
+Cover and Hart (1967) gave the ﬁrst analysis of 1-NN, showing that its risk con-
+verges to twice the Bayes optimal error under mild conditions. Following a lemma
+due to Stone (1977), Devroye and Györﬁ (1985) have shown that the k-NN rule is
+consistent (with respect to the hypothesis class of all functions from Rd to {0,1}).
+A good presentation of the analysis is given in the book by Devroye et al. (1996).
+Here, we give a ﬁnite sample guarantee that explicitly underscores the prior assump-
+tion on the distribution. See Section 7.4 for a discussion on consistency results.
+Finally, Gottlieb, Kontorovich, and Krauthgamer (2010) derived another ﬁnite
+sample bound for NN that is more similar to VC bounds.
+
+19.6 EXERCISES
+In this exercise we will prove the following theorem for the k-NN rule.
+Theorem 19.5. Let X = [0,1]d,Y = {0,1}, and D be a distribution over X × Y for
+which the conditional probability function, η, is a c-Lipschitz function. Let h S denote
+
+Downloaded from https://www.cambridge.org/core. YBP Library Services, on 13 Aug 2018 at 02:26:22, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.020
+
+226
+
+Nearest Neighbor
+the result of applying the k-NN rule to a sample S ∼ Dm, where k ≥ 10. Let h(cid:7) be the
+Bayes optimal hypothesis. Then,
+1+
+
+√
+d + k
+
+LD(h(cid:7))+
+
+[LD(h S)] ≤
+
+−1/(d+1).
+
+(cid:23)
+
+(cid:26)
+
+(cid:27)
+
+(cid:16)
+
+(cid:17)
+
+6 c
+
+m
+
+E
+S
+
+8
+k
+
+19.1 Prove the following lemma.
+
+Lemma 19.6. Let C1, . . . , Cr be a collection of subsets of some domain set, X . Let S
+⎡
+be a sequence of m points sampled i.i.d. according to some probability distribution,
+D over X . Then, for every k ≥ 2,
+⎣ (cid:7)
+⎤
+⎦ = r(cid:7)
+
+⎤
+⎦ ≤ 2rk
+
+⎡
+⎣ (cid:7)
+
+Hints:
+(cid:2) Show that
+
+i:|Ci∩S|<k
+
+E
+S∼Dm
+
+P[Ci ]
+
+[|Ci ∩ S| < k].
+
+P[Ci ]
+
+m
+
+.
+
+E
+S
+
+i:|Ci∩S|<k
+
+P[Ci ] P
+S
+
+i=1
+
+(cid:2) Fix some i and suppose that k < P[Ci ] m/2. Use Chernoff’s bound to show that
+
+[|Ci ∩ S| < k] ≤ P
+
+[|Ci ∩ S| < P[Ci ]m/2] ≤ e
+
+− P[Ci ]m/8.
+
+P
+S
+
+(cid:2) Use the inequality maxa ae
+
+S
+
+−ma ≤ 1
+
+me to show that for such i we have
+
+P[Ci ] P
+S
+
+[|Ci ∩ S| < k] ≤ P[Ci ]e
+
+− P[Ci ]m/8 ≤ 8
+me
+
+.
+
+(cid:2) Conclude the proof by using the fact that for the case k ≥ P[Ci ] m/2 we clearly
+
+have:
+
+P[Ci ] P
+S
+
+[|Ci ∩ S| < k] ≤ P[Ci ] ≤ 2k
+m
+
+.
+
+19.2 We use the notation y ∼ p as a shorthand for “y is a Bernoulli random variable
+
+with expected value p.” Prove the following lemma:
+Lemma 19.7. Let k ≥ 10 and let Z1, . . . , Zk be independent Bernoulli random
+(cid:26)
+variables with P[Zi = 1] = pi . Denote p = 1
+1+
+
+k
+i=1 Zi. Show that
+
+(cid:2)
+(cid:23)
+
+[y (cid:18)= 1[ p(cid:3) >1/2]] ≤
+
+[y (cid:18)= 1[ p>1/2]].
+
+i pi and p
+
+(cid:2)
+
+(cid:3) = 1
+
+(cid:27)
+
+E
+
+k
+
+k
+
+8
+k
+
+P
+y∼ p
+
+P
+y∼ p
+
+Z1,...,Zk
+
+Hints:
+W.l.o.g. assume that p ≤ 1/2. Then, Py∼ p [y (cid:18)= 1[ p>1/2]] = p. Let y
+(cid:2) Show that
+
+(cid:3) = 1[ p(cid:3) >1/2].
+
+[y (cid:18)= y
+
+(cid:3)
+
+]− p = P
+
+E
+
+P
+y∼ p
+
+Z1,...,Zk
+
+[ p
+(cid:2) Use Chernoff’s bound (Lemma B.3) to show that
+(cid:4)
+−1
+
+−k p h
+
+Z1,...,Zk
+
+(cid:3)
+
+(cid:3) > 1/2] ≤ e
+
+P[ p
+
+1
+2 p
+
+,
+
+(cid:3) > 1/2](1− 2p).
+
+where
+
+h(a) = (1+ a) log(1+ a)− a.
+
+Downloaded from https://www.cambridge.org/core. YBP Library Services, on 13 Aug 2018 at 02:26:22, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.020
+
+19.6 Exercises
+
+227
+
+(cid:2) To conclude the proof of the lemma, you can rely on the following inequality
+
+(cid:23)
+(without proving it): For every p ∈ [0,1/2] and k ≥ 10:
+8
+k
+
+(log(2 p)+1) ≤
+
+(1− 2p) e
+
+−k p+ k
+
+2
+
+p.
+
+19.3 Fix some p, p
+
+(cid:3) ∈ [0,1] and y
+
+(cid:3) ∈ {0,1}. Show that
+[y (cid:18)= y
+y∼ p(cid:3) [y (cid:18)= y
+
+] ≤ P
+
+(cid:3)
+
+P
+y∼ p
+
+(cid:3)
+
+]+| p − p
+
+(cid:3)|.
+
+19.4 Conclude the proof of the theorem according to the following steps:
+
+(cid:2) As in the proof of Theorem 19.3, six some (cid:2) > 0 and let C1, . . . , Cr be the cover
+in the same box we have
+
+of the set X using boxes of length (cid:2). For each x,x(cid:3)
+(cid:9)x− x
+d. Show that
+
+d (cid:2). Otherwise, (cid:9)x− x
+
+(cid:3)(cid:9) ≤ √
+
+√
+⎤
+(cid:3)(cid:9) ≤ 2
+⎦
+
+⎡
+⎣ (cid:7)
+(cid:11)
+i:|Ci∩S|<k
+h S(x) (cid:18)= y | ∀ j ∈ [k], (cid:9)x− xπ j (x)(cid:9) ≤ (cid:2)
+
+P[Ci ]
+
+[LD(h S)] ≤ E
+
+S
+
+E
+S
+
++ max
+
+i
+
+P
+
+S,(x,y)
+
+(cid:12)
+
+d
+
+.
+
+√
+
+(19.3)
+
+(cid:2) Bound the ﬁrst summand using Lemma 19.6.
+(cid:2) To bound the second summand, let us ﬁx S|x and x such that all the k neighbors
+d from x. W.l.o.g assume that the k NN
+i pi . Use Exercise 19.3 to show
+
+of x in S|x are at distance of at most (cid:2)
+are x1, . . . ,xk. Denote pi = η(xi) and let p = 1
+that
+
+√
+
+k
+
+E
+
+y1,...,y j
+
+P
+
+y∼η(x)
+
+W.l.o.g. assume that p ≤ 1/2. Now use Lemma 19.7 to show that
+[1[ p>1/2] (cid:18)= y].
+
+[h S(x) (cid:18)= y] ≤
+
+P
+
+y1,...,y j
+
+[h S(x) (cid:18)= y] ≤ E
+(cid:26)
+1+
+
+P
+y∼ p
+
+(cid:23)
+
+P
+y∼ p
+
+y1,...,y j
+
+8
+k
+
+P
+y∼ p
+
+(cid:2)
+[h S(x) (cid:18)= y]+| p− η(x)|.
+(cid:27)
+
+(cid:2) Show that
+
+P
+y∼ p
+
+[1[ p>1/2] (cid:18)= y] = p = min{ p,1− p} ≤ min{η(x),1− η(x)}+| p− η(x)|.
+
+the second summand in
+
+√
+
+d.
+
+the preceding to obtain that
+
+(cid:27)
+
+(cid:2) Combine all
+Equation (19.3) is bounded by(cid:26)
+(cid:23)
+1+
+(cid:26)
+(cid:2) Use r = (2/(cid:2))d to obtain that:
+1+
+
+[LD(h S)] ≤
+
+(cid:23)
+
+8
+k
+
+E
+S
+
+8
+k
+
+LD(h(cid:7))+ 3c (cid:2)
+(cid:27)
+
+LD(h(cid:7))+ 3c (cid:2)
+
+√
+
+Set (cid:2) = 2m
+
+−1/(d+1) and use
+√
+d + 2k
+e
+
+−1/(d+1)
+
+6c m
+
+−1/(d+1) ≤
+
+m
+
+.
+
+m
+
+d + 2(2/(cid:2))d k
+(cid:17)
+
+−1/(d+1)
+
+m
+
+√
+d + k
+
+(cid:16)
+
+6c
+
+to conclude the proof.
+
+Downloaded from https://www.cambridge.org/core. YBP Library Services, on 13 Aug 2018 at 02:26:22, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.020
+
+

@@ -1,0 +1,1046 @@
+15
+
+Support Vector Machines
+
+In this chapter and the next we discuss a very useful machine learning tool: the
+support vector machine paradigm (SVM) for learning linear predictors in high
+dimensional feature spaces. The high dimensionality of the feature space raises both
+sample complexity and computational complexity challenges.
+
+The SVM algorithmic paradigm tackles the sample complexity challenge by
+searching for “large margin” separators. Roughly speaking, a halfspace separates
+a training set with a large margin if all the examples are not only on the correct
+side of the separating hyperplane but also far away from it. Restricting the algo-
+rithm to output a large margin separator can yield a small sample complexity even
+if the dimensionality of the feature space is high (and even inﬁnite). We introduce
+the concept of margin and relate it to the regularized loss minimization paradigm as
+well as to the convergence rate of the Perceptron algorithm.
+
+In the next chapter we will tackle the computational complexity challenge using
+
+the idea of kernels.
+
+15.1 MARGIN AND HARD-SVM
+Let S = (x1, y1), . . . ,(xm , ym) be a training set of examples, where each xi ∈ Rd and
+yi ∈{±1}. We say that this training set is linearly separable, if there exists a halfspace,
+(w,b), such that yi = sign((cid:7)w,xi(cid:8) + b) for all i. Alternatively, this condition can be
+rewritten as
+
+∀i ∈ [m], yi ((cid:7)w,xi(cid:8)+ b) > 0.
+
+All halfspaces (w,b) that satisfy this condition are ERM hypotheses (their 0-1
+error is zero, which is the minimum possible error). For any separable training
+sample, there are many ERM halfspaces. Which one of them should the learner
+pick?
+
+Consider,
+
+for example,
+
+the training set described in the picture that
+
+follows.
+
+Downloaded from https://www.cambridge.org/core. YBP Library Services, on 13 Aug 2018 at 02:22:52, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.016
+
+167
+
+168
+
+Support Vector Machines
+
+x
+
+x
+
+While both the dashed and solid hyperplanes separate the four examples, our intu-
+ition would probably lead us to prefer the dashed hyperplane over the solid one.
+One way to formalize this intuition is using the concept of margin.
+
+The margin of a hyperplane with respect to a training set is deﬁned to be the
+minimal distance between a point in the training set and the hyperplane. If a hyper-
+plane has a large margin, then it will still separate the training set even if we slightly
+perturb each instance.
+
+We will see later on that the true error of a halfspace can be bounded in terms
+of the margin it has over the training sample (the larger the margin, the smaller the
+error), regardless of the Euclidean dimension in which this halfspace resides.
+
+Hard-SVM is the learning rule in which we return an ERM hyperplane that
+separates the training set with the largest possible margin. To deﬁne Hard-SVM
+formally, we ﬁrst express the distance between a point x to a hyperplane using the
+parameters deﬁning the halfspace.
+
+Claim 15.1. The distance between a point x and the hyperplane deﬁned by (w, b)
+where (cid:9)w(cid:9) = 1 is |(cid:7)w,x(cid:8)+ b|.
+
+Proof. The distance between a point x and the hyperplane is deﬁned as
+
+min{(cid:9)x− v(cid:9) : (cid:7)w,v(cid:8)+ b = 0}.
+
+Taking v = x− ((cid:7)w,x(cid:8)+ b)w we have that
+
+(cid:7)w,v(cid:8)+ b = (cid:7)w,x(cid:8)− ((cid:7)w,x(cid:8)+ b)(cid:9)w(cid:9)2 + b = 0,
+
+and
+
+(cid:9)x− v(cid:9) = |(cid:7)w,x(cid:8)+ b|(cid:9)w(cid:9) = |(cid:7)w,x(cid:8)+ b|.
+
+Hence, the distance is at most |(cid:7)w,x(cid:8) + b|. Next, take any other point u on the
+hyperplane, thus (cid:7)w,u(cid:8)+ b = 0. We have
+
+(cid:9)x− u(cid:9)2 = (cid:9)x− v+ v− u(cid:9)2
+
+= (cid:9)x− v(cid:9)2 +(cid:9)v− u(cid:9)2 + 2(cid:7)x− v,v− u(cid:8)
+≥ (cid:9)x− v(cid:9)2 + 2(cid:7)x− v,v− u(cid:8)
+= (cid:9)x− v(cid:9)2 + 2((cid:7)w,x(cid:8)+ b)(cid:7)w,v− u(cid:8)
+= (cid:9)x− v(cid:9)2,
+
+where the last equality is because (cid:7)w, v(cid:8)=(cid:7)w, u(cid:8)=−b. Hence, the distance between
+x and u is at least the distance between x and v, which concludes our proof.
+
+Downloaded from https://www.cambridge.org/core. YBP Library Services, on 13 Aug 2018 at 02:22:52, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.016
+
+15.1 Margin and Hard-SVM 169
+
+On the basis of the preceding claim, the closest point in the training set to the
+
+separating hyperplane is mini∈[m]|(cid:7)w,xi(cid:8)+ b|. Therefore, the Hard-SVM rule is
+
+argmax
+(w,b):(cid:9)w(cid:9)=1
+
+min
+i∈[m]
+
+|(cid:7)w,xi(cid:8)+ b| s.t. ∀i , yi ((cid:7)w,xi(cid:8)+ b) > 0.
+
+Whenever there is a solution to the preceding problem (i.e., we are in the separable
+case), we can write an equivalent problem as follows (see Exercise 15.1):
+
+argmax
+(w,b):(cid:9)w(cid:9)=1
+
+min
+i∈[m]
+
+yi ((cid:7)w,xi(cid:8)+ b).
+
+(15.1)
+
+Next, we give another equivalent formulation of the Hard-SVM rule as a quadratic
+optimization problem.1
+
+Hard-SVM
+
+input: (x1, y1), . . . ,(xm , ym)
+solve:
+
+(w0,b0) = argmin
+
+(cid:9)w(cid:9)2 s.t. ∀i , yi((cid:7)w,xi(cid:8)+ b) ≥ 1
+
+(15.2)
+
+(w,b)
+
+output: ˆw = w0(cid:9)w0(cid:9) ,
+
+ˆb = b0(cid:9)w0(cid:9)
+
+The lemma that follows shows that the output of hard-SVM is indeed the sep-
+arating hyperplane with the largest margin. Intuitively, hard-SVM searches for
+w of minimal norm among all the vectors that separate the data and for which
+|(cid:7)w,xi(cid:8) + b| ≥ 1 for all i. In other words, we enforce the margin to be 1, but now
+the units in which we measure the margin scale with the norm of w. Therefore, ﬁnd-
+ing the largest margin halfspace boils down to ﬁnding w whose norm is minimal.
+Formally:
+
+Lemma 15.2. The output of Hard-SVM is a solution of Equation (15.1).
+
+Proof. Let (w(cid:7),b(cid:7)) be a solution of Equation (15.1) and deﬁne the margin achieved
+by (w(cid:7),b(cid:7)) to be γ (cid:7) = mini∈[m] yi((cid:7)w(cid:7),xi(cid:8)+ b(cid:7)). Therefore, for all i we have
+
+yi((cid:7)w(cid:7),xi(cid:8)+ b(cid:7)) ≥ γ (cid:7)
+
+or equivalently
+
+yi((cid:7) w(cid:7)
+
+γ (cid:7) ,xi(cid:8)+ b(cid:7)
+
+γ (cid:7) ) ≥ 1.
+
+γ (cid:7) , b(cid:7)
+
+Hence, the pair ( w(cid:7)
+lem given in Equation (15.2). Therefore, (cid:9)w0(cid:9) ≤ (cid:9) w(cid:7)
+all i,
+
+γ (cid:7) ) satisﬁes the conditions of the quadratic optimization prob-
+γ (cid:7) . It follows that for
+
+γ (cid:7) (cid:9) = 1
+(cid:9)w0(cid:9) ≥ γ (cid:7).
+(cid:9)w0(cid:9) yi((cid:7)w0,xi(cid:8)+ b0) ≥ 1
+
+yi((cid:7) ˆw,xi(cid:8)+ ˆb) = 1
+
+Since (cid:9) ˆw(cid:9) = 1 we obtain that ( ˆw, ˆb) is an optimal solution of Equation (15.1).
+
+1 A quadratic optimization problem is an optimization problem in which the objective is a convex
+
+quadratic function and the constraints are linear inequalities.
+
+Downloaded from https://www.cambridge.org/core. YBP Library Services, on 13 Aug 2018 at 02:22:52, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.016
+
+170
+
+Support Vector Machines
+
+15.1.1 The Homogenous Case
+It is often more convenient to consider homogenous halfspaces, namely, halfspaces
+that pass through the origin and are thus deﬁned by sign((cid:7)w,x(cid:8)), where the bias term
+b is set to be zero. Hard-SVM for homogenous halfspaces amounts to solving
+
+(cid:9)w(cid:9)2
+
+s.t. ∀i , yi(cid:7)w,xi(cid:8) ≥ 1.
+
+min
+w
+
+(15.3)
+
+As we discussed in Chapter 9, we can reduce the problem of learning
+nonhomogenous halfspaces to the problem of learning homogenous halfspaces by
+adding one more feature to each instance of xi , thus increasing the dimension to
+d + 1.
+Note, however, that the optimization problem given in Equation (15.2) does not
+regularize the bias term b, while if we learn a homogenous halfspace in Rd+1 using
+Equation (15.3) then we regularize the bias term (i.e., the d + 1 component of the
+weight vector) as well. However, regularizing b usually does not make a signiﬁcant
+difference to the sample complexity.
+
+15.1.2 The Sample Complexity of Hard-SVM
+Recall that the VC-dimension of halfspaces in Rd is d + 1. It follows that the sample
+complexity of learning halfspaces grows with the dimensionality of the problem.
+Furthermore, the fundamental theorem of learning tells us that if the number of
+examples is signiﬁcantly smaller than d/(cid:2) then no algorithm can learn an (cid:2)-accurate
+halfspace. This is problematic when d is very large.
+
+To overcome this problem, we will make an additional assumption on the under-
+lying data distribution. In particular, we will deﬁne a “separability with margin γ ”
+assumption and will show that if the data is separable with margin γ then the sam-
+ple complexity is bounded from above by a function of 1/γ 2. It follows that even if
+the dimensionality is very large (or even inﬁnite), as long as the data adheres to the
+separability with margin assumption we can still have a small sample complexity.
+There is no contradiction to the lower bound given in the fundamental theorem of
+learning because we are now making an additional assumption on the underlying
+data distribution.
+Before we formally deﬁne the separability with margin assumption, there is a
+scaling issue we need to resolve. Suppose that a training set S = (x1, y1), . . . ,(xm , ym)
+is separable with a margin γ ; namely, the maximal objective value of Equation (15.1)
+(cid:3) =
+is at least γ . Then,
+(αx1, y1), . . . ,(αxm , ym) is separable with a margin of αγ . That is, a simple scaling
+of the data can make it separable with an arbitrarily large margin. It follows that in
+order to give a meaningful deﬁnition of margin we must take into account the scale
+of the examples as well. One way to formalize this is using the deﬁnition that follows.
+Deﬁnition 15.3. Let D be a distribution over Rd ×{±1}. We say that D is separable
+with a (γ , ρ)-margin if there exists (w(cid:7),b(cid:7)) such that (cid:9)w(cid:7)(cid:9) = 1 and such that with
+probability 1 over the choice of (x, y) ∼ D we have that y((cid:7)w(cid:7),x(cid:8)+ b(cid:7)) ≥ γ and (cid:9)x(cid:9) ≤
+ρ. Similarly, we say that D is separable with a (γ , ρ)-margin using a homogenous
+halfspace if the preceding holds with a halfspace of the form (w(cid:7),0).
+
+for any positive scalar α > 0,
+
+the training set S
+
+Downloaded from https://www.cambridge.org/core. YBP Library Services, on 13 Aug 2018 at 02:22:52, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.016
+
+15.2 Soft-SVM and Norm Regularization
+
+171
+
+In the advanced part of the book (Chapter 26), we will prove that the sample
+complexity of Hard-SVM depends on (ρ/γ )2 and is independent of the dimension
+d. In particular, Theorem 26.13 in Section 26.3 states the following:
+Theorem 15.4. Let D be a distribution over Rd × {±1} that satisﬁes the (γ , ρ)-
+separability with margin assumption using a homogenous halfspace. Then, with
+probability of at least 1− δ over the choice of a training set of size m, the 0-1 error of
+the output of Hard-SVM is at most+
+
+(cid:23)
+
+4(ρ/γ )2
+
+m
+
++
+
+2log(2/δ)
+
+m
+
+.
+
+Remark 15.1 (Margin and the Perceptron). In Section 9.1.2 we have described and
+analyzed the Perceptron algorithm for ﬁnding an ERM hypothesis with respect to
+the class of halfspaces. In particular, in Theorem 9.1 we upper bounded the num-
+ber of updates the Perceptron might make on a given training set. It can be shown
+(see Exercise 15.2) that the upper bound is exactly (ρ/γ )2, where ρ is the radius of
+examples and γ is the margin.
+
+15.2 SOFT-SVM AND NORM REGULARIZATION
+The Hard-SVM formulation assumes that the training set is linearly separable,
+which is a rather strong assumption. Soft-SVM can be viewed as a relaxation of the
+Hard-SVM rule that can be applied even if the training set is not linearly separable.
+The optimization problem in Equation (15.2) enforces the hard constraints
+yi((cid:7)w,xi(cid:8) + b) ≥ 1 for all i. A natural relaxation is to allow the constraint to be
+violated for some of the examples in the training set. This can be modeled by
+introducing nonnegative slack variables, ξ1, . . . , ξm, and replacing each constraint
+yi((cid:7)w,xi(cid:8) + b) ≥ 1 by the constraint yi((cid:7)w,xi(cid:8) + b) ≥ 1 − ξi . That is, ξi measures
+by how much the constraint yi((cid:7)w,xi(cid:8) + b) ≥ 1 is being violated. Soft-SVM jointly
+minimizes the norm of w (corresponding to the margin) and the average of ξi (cor-
+responding to the violations of the constraints). The tradeoff between the two terms
+is controlled by a parameter λ. This leads to the Soft-SVM optimization problem:
+
+Soft-SVM
+
+input: (x1, y1), . . . ,(xm , ym)
+parameter: λ > 0
+solve:
+
+(cid:26)
+
+(cid:27)
+
+m(cid:7)
+
+λ(cid:9)w(cid:9)2 + 1
+m
+
+min
+w,b,ξ
+s.t. ∀i , yi((cid:7)w,xi(cid:8)+ b) ≥ 1− ξi and ξi ≥ 0
+
+i=1
+
+ξi
+
+(15.4)
+
+output: w,b
+
+Downloaded from https://www.cambridge.org/core. YBP Library Services, on 13 Aug 2018 at 02:22:52, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.016
+
+172
+
+Support Vector Machines
+
+We can rewrite Equation (15.4) as a regularized loss minimization problem.
+
+Recall the deﬁnition of the hinge loss:
+
+(cid:9)hinge((w,b),(x, y)) = max{0,1− y((cid:7)w,x(cid:8)+ b)}.
+
+Given (w,b) and a training set S, the averaged hinge loss on S is denoted by
+Lhinge
+S
+
+((w,b)). Now, consider the regularized loss minimization problem:
+
+(cid:16)
+
+(cid:17)
+
+λ(cid:9)w(cid:9)2 + Lhinge
+
+S
+
+min
+w,b
+
+((w,b))
+
+.
+
+(15.5)
+
+Claim 15.5. Equation (15.4) and Equation (15.5) are equivalent.
+
+Proof. Fix some w,b and consider the minimization over ξ in Equation (15.4).
+Fix some i. Since ξi must be nonnegative, the best assignment to ξi would be 0
+if yi((cid:7)w,xi(cid:8) + b) ≥ 1 and would be 1 − yi((cid:7)w,xi(cid:8) + b) otherwise. In other words,
+ξi = (cid:9)hinge((w,b),(xi , yi )) for all i, and the claim follows.
+
+We therefore see that Soft-SVM falls into the paradigm of regularized loss min-
+imization that we studied in the previous chapter. A Soft-SVM algorithm, that is, a
+solution for Equation (15.5), has a bias toward low norm separators. The objective
+function that we aim to minimize in Equation (15.5) penalizes not only for training
+errors but also for large norm.
+
+It is often more convenient to consider Soft-SVM for learning a homogenous
+halfspace, where the bias term b is set to be zero, which yields the following
+optimization problem:
+
+(cid:16)
+
+(cid:17)
+
+(w)
+
+,
+
+(15.6)
+
+where
+
+Lhinge
+S
+
+min
+w
+
+λ(cid:9)w(cid:9)2 + Lhinge
+m(cid:7)
+
+S
+
+(w) = 1
+m
+
+i=1
+
+max{0,1− y(cid:7)w,xi(cid:8)}.
+
+15.2.1 The Sample Complexity of Soft-SVM
+We now analyze the sample complexity of Soft-SVM for the case of homogenous
+halfspaces (namely, the output of Equation (15.6)). In Corollary 13.8 we derived
+a generalization bound for the regularized loss minimization framework assuming
+that the loss function is convex and Lipschitz. We have already shown that the hinge
+loss is convex so it is only left to analyze the Lipschitzness of the hinge loss.
+Claim 15.6. Let f (w) = max{0,1− y(cid:7)w,x(cid:8)}. Then, f is (cid:9)x(cid:9)-Lipschitz.
+Proof. It is easy to verify that any subgradient of f at w is of the form αx where
+|α| ≤ 1. The claim now follows from Lemma 14.7.
+Corollary 13.8 therefore yields the following:
+
+Corollary 15.7. Let D be a distribution over X × {0,1}, where X = {x : (cid:9)x(cid:9) ≤ ρ}.
+Consider running Soft-SVM (Equation (15.6)) on a training set S ∼ Dm and let A(S)
+be the solution of Soft-SVM. Then, for every u,
+
+[LhingeD (A(S))] ≤ LhingeD (u)+ λ(cid:9)u(cid:9)2 + 2ρ2
+λm
+
+.
+
+E
+S∼Dm
+
+Downloaded from https://www.cambridge.org/core. YBP Library Services, on 13 Aug 2018 at 02:22:52, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.016
+
+Furthermore, since the hinge loss upper bounds the 0−1 loss we also have
+
+15.2 Soft-SVM and Norm Regularization
+
+173
+
+[L0−1D (A(S))] ≤ LhingeD (u)+ λ(cid:9)u(cid:9)2 + 2ρ2
+λm
+
+E
+S∼Dm
+
+(cid:31)
+
+Last, for every B > 0, if we set λ =
+
+2ρ2
+B2m then
+
+.
+
++
+
+[L0−1D (A(S))] ≤ E
+S∼Dm
+
+[LhingeD (A(S))] ≤ min
+w:(cid:9)w(cid:9)≤B
+
+E
+S∼Dm
+
+LhingeD (w)+
+
+8ρ2 B2
+
+m
+
+.
+
+We therefore see that we can control the sample complexity of learning a half-
+space as a function of the norm of that halfspace, independently of the Euclidean
+dimension of the space over which the halfspace is deﬁned. This becomes highly
+signiﬁcant when we learn via embeddings into high dimensional feature spaces, as
+we will consider in the next chapter.
+Remark 15.2. The condition that X will contain vectors with a bounded norm fol-
+lows from the requirement that the loss function will be Lipschitz. This is not just
+a technicality. As we discussed before, separation with large margin is meaningless
+without imposing a restriction on the scale of the instances. Indeed, without a con-
+straint on the scale, we can always enlarge the margin by multiplying all instances
+by a large scalar.
+
+15.2.2 Margin and Norm-Based Bounds versus Dimension
+The bounds we have derived for Hard-SVM and Soft-SVM do not depend on the
+dimension of the instance space. Instead, the bounds depend on the norm of the
+examples, ρ, the norm of the halfspace B (or equivalently the margin parameter
+γ ) and, in the nonseparable case, the bounds also depend on the minimum hinge
+loss of all halfspaces of norm ≤ B. In contrast, the VC-dimension of the class of
+√
+homogenous halfspaces is d, which implies that the error of an ERM hypothesis
+d/m does. We now give an example in which ρ2 B2 ’ d; hence the
+decreases as
+bound given in Corollary 15.7 is much better than the VC bound.
+
+Consider the problem of learning to classify a short text document according
+to its topic, say, whether the document is about sports or not. We ﬁrst need to
+represent documents as vectors. One simple yet effective way is to use a bag-of-
+words representation. That is, we deﬁne a dictionary of words and set the dimension
+d to be the number of words in the dictionary. Given a document, we represent it
+as a vector x ∈ {0,1}d, where xi = 1 if the i’th word in the dictionary appears in the
+document and xi = 0 otherwise. Therefore, for this problem, the value of ρ2 will be
+the maximal number of distinct words in a given document.
+
+A halfspace for this problem assigns weights to words. It is natural to assume
+that by assigning positive and negative weights to a few dozen words we will be
+able to determine whether a given document is about sports or not with reasonable
+accuracy. Therefore, for this problem, the value of B2 can be set to be less than 100.
+Overall, it is reasonable to say that the value of B2ρ2 is smaller than 10,000.
+
+On the other hand, a typical size of a dictionary is much larger than 10,000. For
+example, there are more than 100,000 distinct words in English. We have therefore
+
+Downloaded from https://www.cambridge.org/core. YBP Library Services, on 13 Aug 2018 at 02:22:52, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.016
+
+174
+
+Support Vector Machines
+
+shown a problem in which there can be an order of magnitude difference between
+learning a halfspace with the SVM rule and learning a halfspace using the vanilla
+ERM rule.
+
+Of course, it is possible to construct problems in which the SVM bound will be
+worse than the VC bound. When we use SVM, we in fact introduce another form
+of inductive bias – we prefer large margin halfspaces. While this inductive bias can
+signiﬁcantly decrease our estimation error, it can also enlarge the approximation
+error.
+
+(cid:22)
+
+15.2.3 The Ramp Loss*
+The margin-based bounds we have derived in Corollary 15.7 rely on the fact that
+we minimize the hinge loss. As we have shown in the previous subsection, the
+√
+ρ2 B2/m can be much smaller than the corresponding term in the VC bound,
+term
+d/m. However, the approximation error in Corollary 15.7 is measured with respect
+to the hinge loss while the approximation error in VC bounds is measured with
+respect to the 0−1 loss. Since the hinge loss upper bounds the 0−1 loss, the approx-
+imation error with respect to the 0−1 loss will never exceed that of the hinge
+(cid:22)
+loss.
+It is not possible to derive bounds that involve the estimation error term
+ρ2 B2/m for the 0−1 loss. This follows from the fact that the 0−1 loss is scale
+insensitive, and therefore there is no meaning to the norm of w or its margin when
+we measure error with the 0−1 loss. However, it is possible to deﬁne a loss function
+ρ2 B2/m
+that on one hand it is scale sensitive and thus enjoys the estimation error
+while on the other hand it is more similar to the 0−1 loss. One option is the ramp
+loss, deﬁned as
+
+(cid:22)
+
+(cid:9)ramp(w,(x, y)) = min{1, (cid:9)hinge(w,(x, y))} = min{1 , max{0,1− y(cid:7)w,x(cid:8)}}.
+
+The ramp loss penalizes mistakes in the same way as the 0−1 loss and does not
+penalize examples that are separated with margin. The difference between the ramp
+loss and the 0−1 loss is only with respect to examples that are correctly classiﬁed but
+not with a signiﬁcant margin. Generalization bounds for the ramp loss are given in
+the advanced part of this book (see Appendix 26.3).
+
+(cid:2)hinge
+
+(cid:2)ramp
+
+(cid:2)0 − 1
+
+1
+
+1
+
+y 〈w, x〉
+
+Downloaded from https://www.cambridge.org/core. YBP Library Services, on 13 Aug 2018 at 02:22:52, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.016
+
+The reason SVM relies on the hinge loss and not on the ramp loss is that the
+hinge loss is convex and, therefore, from the computational point of view, min-
+imizing the hinge loss can be performed efﬁciently. In contrast, the problem of
+minimizing the ramp loss is computationally intractable.
+
+15.4 Duality
+
+175
+
+15.3 OPTIMALITY CONDITIONS AND “SUPPORT VECTORS”*
+The name “Support Vector Machine” stems from the fact that the solution of hard-
+SVM, w0, is supported by (i.e., is in the linear span of) the examples that are exactly
+at distance 1/(cid:9)w0(cid:9) from the separating hyperplane. These vectors are therefore
+called support vectors. To see this, we rely on Fritz John optimality conditions.
+Theorem 15.8. Let w0 be as deﬁned in Equation (15.3) and let I = {i : |(cid:7)w0,xi(cid:8)| = 1}.
+Then, there exist coefﬁcients α1, . . . , αm such that
+
+(cid:7)
+
+i∈I
+
+w0 =
+
+αixi .
+
+The examples {xi : i ∈ I} are called support vectors.
+The proof of this theorem follows by applying the following lemma to
+
+Equation (15.3).
+
+Lemma 15.9 (Fritz John). Suppose that
+
+w(cid:7) ∈ argmin
+
+f (w) s.t. ∀i ∈ [m], gi(w) ≤ 0,
+
+(cid:2)
+where f , g1, . . . , gm are differentiable. Then, there exists α ∈ Rm such that ∇ f (w(cid:7)) +
+
+w
+
+αi∇gi(w(cid:7)) = 0, where I = {i : gi(w(cid:7)) = 0}.
+
+i∈I
+
+15.4 DUALITY*
+Historically, many of the properties of SVM have been obtained by considering
+the dual of Equation (15.3). Our presentation of SVM does not rely on duality. For
+completeness, we present in the following how to derive the dual of Equation (15.3).
+We start by rewriting the problem in an equivalent form as follows. Consider the
+
+function
+
+g(w) = max
+α∈Rm:α≥0
+
+m(cid:7)
+
+i=1
+
+αi (1− yi(cid:7)w, xi(cid:8)) =
+
+if ∀i , yi(cid:7)w,xi(cid:8) ≥ 1
+
+0
+∞ otherwise
+
+.
+
+(cid:5)
+
+We can therefore rewrite Equation (15.3) as
+
+.
+
+(15.7)
+
+Rearranging the preceding we obtain that Equation (15.3) can be rewritten as the
+problem
+
+(cid:27)
+αi (1− yi(cid:7)w,xi(cid:8))
+
+(cid:9)w(cid:9)2 + m(cid:7)
+
+i=1
+
+min
+w
+
+max
+
+α∈Rm:α≥0
+
+1
+2
+
+.
+
+(15.8)
+
+(cid:16)
+
+(cid:17)
+(cid:9)w(cid:9)2 + g(w)
+
+min
+w
+
+(cid:26)
+
+Downloaded from https://www.cambridge.org/core. YBP Library Services, on 13 Aug 2018 at 02:22:52, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.016
+
+176
+
+Support Vector Machines
+
+(cid:27)
+Now suppose that we ﬂip the order of min and max in the equation. This can only
+decrease the objective value (see Exercise 15.4), and we have
+αi (1− yi(cid:7)w,xi(cid:8))
+
+(cid:26)
+
+max
+
+min
+w
+
+α∈Rm:α≥0
+
+1
+2
+
+(cid:9)w(cid:9)2 + m(cid:7)
+(cid:26)
+(cid:9)w(cid:9)2 + m(cid:7)
+
+i=1
+
+i=1
+
+≥ max
+α∈Rm:α≥0
+
+min
+w
+
+1
+2
+
+(cid:27)
+αi (1− yi(cid:7)w,xi(cid:8))
+
+.
+
+The preceding inequality is called weak duality. It turns out that in our case, strong
+duality also holds; namely, the inequality holds with equality. Therefore, the dual
+problem is
+
+(cid:26)
+
+(cid:27)
+αi (1− yi(cid:7)w,xi(cid:8))
+
+(cid:9)w(cid:9)2 + m(cid:7)
+
+i=1
+
+max
+
+α∈Rm:α≥0
+
+min
+w
+
+1
+2
+
+.
+
+(15.9)
+
+We can simplify the dual problem by noting that once α is ﬁxed, the optimization
+problem with respect to w is unconstrained and the objective is differentiable; thus,
+at the optimum, the gradient equals zero:
+
+w− m(cid:7)
+
+αi yixi = 0 ⇒ w = m(cid:7)
+
+i=1
+
+αi yixi .
+
+i=1
+
+This shows us that the solution must be in the linear span of the examples, a
+fact we will use later to derive SVM with kernels. Plugging the preceding into
+Equation (15.9) we obtain that the dual problem can be rewritten as
+
+max
+
+α∈Rm :α≥0
+
+i=1
+Rearranging yields the dual problem
+
+i=1
+
+αi yixi
+
+⎛
+⎝ 1
+
+2
+
+11111 m(cid:7)
+
+max
+
+α∈Rm:α≥0
+
+#⎞
+⎠
+
+⎞
+⎠.
+
+"(cid:7)
+
+αi
+
+111112 + m(cid:7)
+⎛
+⎝ m(cid:7)
+
+αi − 1
+2
+
+i=1
+
+⎛
+⎝1− yi
+m(cid:7)
+m(cid:7)
+
+i=1
+
+j=1
+
+α j y jx j ,xi
+
+j
+
+⎞
+⎠.
+αi α j yi y j(cid:7)x j ,xi(cid:8)
+
+(15.10)
+
+(15.11)
+
+Note that the dual problem only involves inner products between instances and
+does not require direct access to speciﬁc elements within an instance. This prop-
+erty is important when implementing SVM with kernels, as we will discuss in the
+next chapter.
+
+15.5 IMPLEMENTING SOFT-SVM USING SGD
+In this section we describe a very simple algorithm for solving the optimization
+problem of Soft-SVM, namely,
+
+(cid:27)
+
+(cid:26)
+
+min
+w
+
+λ
+2
+
+(cid:9)w(cid:9)2 + 1
+m
+
+max{0,1− y(cid:7)w,xi(cid:8)}
+
+.
+
+(15.12)
+
+m(cid:7)
+
+i=1
+
+We rely on the SGD framework for solving regularized loss minimization problems,
+as described in Section 14.5.3.
+
+Downloaded from https://www.cambridge.org/core. YBP Library Services, on 13 Aug 2018 at 02:22:52, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.016
+
+15.7 Bibliographic Remarks
+
+177
+
+Recall that, on the basis of Equation (14.15), we can rewrite the update rule of
+
+SGD as
+
+w(t+1) = − 1
+λt
+
+t(cid:7)
+
+j=1
+
+v j ,
+
+y(cid:7)w( j),x(cid:8)≥ 1 and v j =−y x otherwise (see Example 14.2). Denoting θ (t) =−(cid:2)
+
+where v j is a subgradient of the loss function at w( j) on the random example chosen
+at iteration j. For the hinge loss, given an example (x, y), we can choose v j to be 0 if
+j <t v j
+
+we obtain the following procedure.
+
+SGD for Solving Soft-SVM
+
+λ t
+
+goal: Solve Equation (15.12)
+parameter: T
+initialize: θ (1) = 0
+for t = 1, . . . , T
+Let w(t) = 1
+θ (t)
+Choose i uniformly at random from [m]
+If (yi(cid:7)w(t),xi(cid:8) < 1)
+Set θ (t+1) = θ (t) + yixi
+(cid:2)
+Else
+Set θ (t+1) = θ (t)
+output: ¯w = 1
+
+T
+t=1 w(t)
+
+T
+
+15.6 SUMMARY
+SVM is an algorithm for learning halfspaces with a certain type of prior knowledge,
+namely, preference for large margin. Hard-SVM seeks the halfspace that separates
+the data perfectly with the largest margin, whereas soft-SVM does not assume sep-
+arability of the data and allows the constraints to be violated to some extent. The
+sample complexity for both types of SVM is different from the sample complexity
+of straightforward halfspace learning, as it does not depend on the dimension of the
+domain but rather on parameters such as the maximal norms of x and w.
+
+The importance of dimension-independent sample complexity will be realized
+in the next chapter, where we will discuss the embedding of the given domain into
+some high dimensional feature space as means for enriching our hypothesis class.
+Such a procedure raises computational and sample complexity problems. The lat-
+ter is solved by using SVM, whereas the former can be solved by using SVM with
+kernels, as we will see in the next chapter.
+
+15.7 BIBLIOGRAPHIC REMARKS
+SVMs have been introduced in (Cortes and Vapnik 1995, Boser, Guyon and Vapnik
+1992). There are many good books on the theoretical and practical aspects of SVMs.
+For example, (Vapnik 1995, Cristianini & Shawe-Taylor 2000, Schölkopf & Smola
+2002, Hsu et al. 2003, Steinwart and Christmann 2008). Using SGD for solving soft-
+SVM has been proposed in Shalev-Shwartz et al. (2007).
+
+Downloaded from https://www.cambridge.org/core. YBP Library Services, on 13 Aug 2018 at 02:22:52, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.016
+
+178
+
+Support Vector Machines
+
+15.8 EXERCISES
+15.1 Show that the hard-SVM rule, namely,
+
+argmax
+(w,b):(cid:9)w(cid:9)=1
+
+min
+i∈[m]
+
+|(cid:7)w,xi(cid:8)+ b| s.t. ∀i , yi((cid:7)w,xi(cid:8)+ b) > 0,
+
+is equivalent to the following formulation:
+
+argmax
+(w,b):(cid:9)w(cid:9)=1
+
+min
+i∈[m]
+
+yi ((cid:7)w,xi(cid:8)+ b).
+
+(15.13)
+
+Hint: Deﬁne G = {(w, b) : ∀i , yi((cid:7)w,xi(cid:8)+ b) > 0}.
+1. Show that
+
+2. Show that ∀(w, b) ∈ G,
+
+argmax
+(w,b):(cid:9)w(cid:9)=1
+
+min
+i∈[m]
+
+yi((cid:7)w,xi(cid:8)+ b) ∈ G
+
+yi((cid:7)w,xi(cid:8)+ b) = min
+i∈[m]
+
+|(cid:7)w,xi(cid:8)+ b|
+
+min
+i∈[m]
+
+15.2 Margin and the Perceptron Consider a training set that is linearly separable with a
+margin γ and such that all the instances are within a ball of radius ρ. Prove that the
+maximal number of updates the Batch Perceptron algorithm given in Section 9.1.2
+will make when running on this training set is (ρ/γ )2.
+
+15.3 Hard versus soft SVM: Prove or refute the following claim:
+
+There exists λ > 0 such that for every sample S of m > 1 examples, which is separa-
+ble by the class of homogenous halfspaces, the hard-SVM and the soft-SVM (with
+parameter λ) learning rules return exactly the same weight vector.
+15.4 Weak duality: Prove that for any function f of two vector variables x ∈ X ,y ∈ Y, it
+
+holds that
+
+y∈Y f (x,y) ≥ max
+
+x∈X max
+min
+
+y∈Y min
+
+x∈X f (x,y).
+
+Downloaded from https://www.cambridge.org/core. YBP Library Services, on 13 Aug 2018 at 02:22:52, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.016
+
+

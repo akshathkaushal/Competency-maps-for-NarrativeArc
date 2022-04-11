@@ -1,0 +1,1180 @@
+22
+
+Clustering
+
+Clustering is one of the most widely used techniques for exploratory data analysis.
+Across all disciplines, from social sciences to biology to computer science, people
+try to get a ﬁrst intuition about their data by identifying meaningful groups among
+the data points. For example, computational biologists cluster genes on the basis of
+similarities in their expression in different experiments; retailers cluster customers,
+on the basis of their customer proﬁles, for the purpose of targeted marketing; and
+astronomers cluster stars on the basis of their spacial proximity.
+
+The ﬁrst point that one should clarify is, naturally, what is clustering? Intuitively,
+clustering is the task of grouping a set of objects such that similar objects end up in
+the same group and dissimilar objects are separated into different groups. Clearly,
+this description is quite imprecise and possibly ambiguous. Quite surprisingly, it is
+not at all clear how to come up with a more rigorous deﬁnition.
+
+There are several sources for this difﬁculty. One basic problem is that the two
+objectives mentioned in the earlier statement may in many cases contradict each
+other. Mathematically speaking, similarity (or proximity) is not a transitive relation,
+while cluster sharing is an equivalence relation and, in particular, it is a transitive
+relation. More concretely, it may be the case that there is a long sequence of objects,
+x1, . . . , xm such that each xi is very similar to its two neighbors, xi−1 and xi+1, but x1
+and xm are very dissimilar. If we wish to make sure that whenever two elements
+are similar they share the same cluster, then we must put all of the elements of
+the sequence in the same cluster. However, in that case, we end up with dissimilar
+elements (x1 and xm) sharing a cluster, thus violating the second requirement.
+
+To illustrate this point further, suppose that we would like to cluster the points
+
+in the following picture into two clusters.
+
+A clustering algorithm that emphasizes not separating close-by points (e.g., the
+Single Linkage algorithm that will be described in Section 22.1) will cluster this input
+
+264
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:58:35, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.023
+
+by separating it horizontally according to the two lines:
+
+Clustering
+
+265
+
+In contrast, a clustering method that emphasizes not having far-away points share
+the same cluster (e.g., the 2-means algorithm that will be described in Section 22.1)
+will cluster the same input by dividing it vertically into the right-hand half and the
+left-hand half:
+
+Another basic problem is the lack of “ground truth” for clustering, which is a
+common problem in unsupervised learning. So far in the book, we have mainly dealt
+with supervised learning (e.g., the problem of learning a classiﬁer from labeled train-
+ing data). The goal of supervised learning is clear – we wish to learn a classiﬁer
+which will predict the labels of future examples as accurately as possible. Further-
+more, a supervised learner can estimate the success, or the risk, of its hypotheses
+using the labeled training data by computing the empirical loss. In contrast, clus-
+tering is an unsupervised learning problem; namely, there are no labels that we
+try to predict. Instead, we wish to organize the data in some meaningful way.
+As a result, there is no clear success evaluation procedure for clustering. In fact,
+even on the basis of full knowledge of the underlying data distribution, it is not
+clear what is the “correct” clustering for that data or how to evaluate a proposed
+clustering.
+
+Consider, for example, the following set of points in R2:
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:58:35, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.023
+
+266
+
+Clustering
+
+and suppose we are required to cluster them into two clusters. We have two highly
+justiﬁable solutions:
+
+This phenomenon is not just artiﬁcial but occurs in real applications. A given set
+of objects can be clustered in various different meaningful ways. This may be due
+to having different implicit notions of distance (or similarity) between objects, for
+example, clustering recordings of speech by the accent of the speaker versus clus-
+tering them by content, clustering movie reviews by movie topic versus clustering
+them by the review sentiment, clustering paintings by topic versus clustering them
+by style, and so on.
+
+To summarize, there may be several very different conceivable clustering solu-
+tions for a given data set. As a result, there is a wide variety of clustering algorithms
+that, on some input data, will output very different clusterings.
+A Clustering Model:
+Clustering tasks can vary in terms of both the type of input they have and the type
+of outcome they are expected to compute. For concreteness, we shall focus on the
+following common setup:
+
+(cid:28)
+
+Input – a set of elements, X , and a distance function over it. That is, a function
+d : X ×X → R+ that is symmetric, satisﬁes d(x , x) = 0 for all x ∈ X , and often
+also satisﬁes the triangle inequality. Alternatively, the function could be a sim-
+ilarity function s : X × X → [0,1] that is symmetric and satisﬁes s(x , x) = 1
+for all x ∈ X . Additionally, some clustering algorithms also require an input
+parameter k (determining the number of required clusters).
+Output – a partition of the domain set X into subsets. That is, C = (C1, . . . Ck)
+i=1 Ci = X and for all i (cid:18)= j, Ci ∩ C j = ∅. In some situations the
+where
+clustering is “soft,” namely, the partition of X into the different clusters is
+probabilistic where the output is a function assigning to each domain point,
+x ∈ X , a vector ( p1(x), . . . , pk(x)), where pi(x) = P[x ∈ Ci ] is the probability
+that x belongs to cluster Ci . Another possible output is a clustering dendro-
+gram (from Greek dendron = tree, gramma = drawing), which is a hierarchical
+tree of domain subsets, having the singleton sets in its leaves, and the full
+domain as its root. We shall discuss this formulation in more detail in the
+following.
+
+k
+
+In the following we survey some of the most popular clustering methods. In the
+last section of this chapter we return to the high level discussion of what is clustering.
+
+22.1 LINKAGE-BASED CLUSTERING ALGORITHMS
+Linkage-based clustering is probably the simplest and most straightforward
+paradigm of clustering. These algorithms proceed in a sequence of rounds. They
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:58:35, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.023
+
+22.1 Linkage-Based Clustering Algorithms
+
+267
+
+start from the trivial clustering that has each data point as a single-point cluster.
+Then, repeatedly, these algorithms merge the “closest” clusters of the previous clus-
+tering. Consequently, the number of clusters decreases with each such round. If kept
+going, such algorithms would eventually result in the trivial clustering in which all of
+the domain points share one large cluster. Two parameters, then, need to be deter-
+mined to deﬁne such an algorithm clearly. First, we have to decide how to measure
+(or deﬁne) the distance between clusters, and, second, we have to determine when
+to stop merging. Recall that the input to a clustering algorithm is a between-points
+distance function, d. There are many ways of extending d to a measure of distance
+between domain subsets (or clusters). The most common ways are
+
+1. Single Linkage clustering, in which the between-clusters distance is deﬁned
+
+by the minimum distance between members of the two clusters, namely,
+
+D(A, B) def= min{d(x , y) : x ∈ A, y ∈ B}
+
+2. Average Linkage clustering, in which the distance between two clusters is
+deﬁned to be the average distance between a point in one of the clusters and
+a point in the other, namely,
+
+(cid:7)
+
+D(A, B) def=
+
+1
+
+|A||B|
+
+d(x , y)
+
+x∈A, y∈B
+
+3. Max Linkage clustering, in which the distance between two clusters is deﬁned
+
+as the maximum distance between their elements, namely,
+D(A, B) def= max{d(x , y) : x ∈ A, y ∈ B}.
+
+The linkage-based clustering algorithms are agglomerative in the sense that they
+start from data that is completely fragmented and keep building larger and larger
+clusters as they proceed. Without employing a stopping rule, the outcome of such
+an algorithm can be described by a clustering dendrogram: that is, a tree of domain
+subsets, having the singleton sets in its leaves, and the full domain as its root. For
+example, if the input is the elements X = {a,b,c,d,e} ⊂ R2 with the Euclidean dis-
+tance as depicted on the left, then the resulting dendrogram is the one depicted on
+the right:
+
+a
+
+e
+d
+
+c
+
+b
+
+{a, b, c, d, e}
+
+{b, c, d, e}
+
+{b, c}
+
+{d, e}
+
+{a}
+
+{b}
+
+{c}
+
+{d}
+
+{e}
+
+The single linkage algorithm is closely related to Kruskal’s algorithm for ﬁnding
+a minimal spanning tree on a weighted graph. Indeed, consider the full graph whose
+vertices are elements of X and the weight of an edge (x , y) is the distance d(x , y).
+Each merge of two clusters performed by the single linkage algorithm corresponds
+to a choice of an edge in the aforementioned graph. It is also possible to show that
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:58:35, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.023
+
+268
+
+Clustering
+
+the set of edges the single linkage algorithm chooses along its run forms a minimal
+spanning tree.
+
+If one wishes to turn a dendrogram into a partition of the space (a clustering),
+
+soon as the number of clusters is k.
+
+one needs to employ a stopping criterion. Common stopping criteria include
+(cid:2) Fixed number of clusters – ﬁx some parameter, k, and stop merging clusters as
+(cid:2) Distance upper bound – ﬁx some r ∈ R+. Stop merging as soon as all
+the between-clusters distances are larger than r. We can also set r to be
+α max{d(x , y) : x , y ∈ X} for some α < 1. In that case the stopping criterion is
+called “scaled distance upper bound.”
+
+22.2 k-MEANS AND OTHER COST MINIMIZATION CLUSTERINGS
+Another popular approach to clustering starts by deﬁning a cost function over a
+parameterized set of possible clusterings and the goal of the clustering algorithm is
+to ﬁnd a partitioning (clustering) of minimal cost. Under this paradigm, the cluster-
+ing task is turned into an optimization problem. The objective function is a function
+from pairs of an input, (X ,d), and a proposed clustering solution C = (C1, . . . ,Ck),
+to positive real numbers. Given such an objective function, which we denote by G,
+the goal of a clustering algorithm is deﬁned as ﬁnding, for a given input (X ,d), a
+clustering C so that G((X ,d),C) is minimized. In order to reach that goal, one has
+to apply some appropriate search algorithm.
+
+As it turns out, most of the resulting optimization problems are NP-hard, and
+some are even NP-hard to approximate. Consequently, when people talk about,
+say, k-means clustering, they often refer to some particular common approximation
+algorithm rather than the cost function or the corresponding exact solution of the
+minimization problem.
+
+Many common objective functions require the number of clusters, k, as a param-
+eter. In practice, it is often up to the user of the clustering algorithm to choose the
+parameter k that is most suitable for the given clustering problem.
+
+In the following we describe some of the most common objective functions.
+
+The k-means objective function is one of the most popular clustering objectives.
+In k-means the data is partitioned into disjoint sets C1, . . . ,Ck where each Ci is
+represented by a centroid μi . It is assumed that the input set X is embedded in
+some larger metric space (X (cid:3),d) (so that X ⊆ X (cid:3)
+) and centroids are members
+of X (cid:3)
+. The k-means objective function measures the squared distance between
+each point in X to the centroid of its cluster. The centroid of Ci is deﬁned to be
+
+μi(Ci ) = argmin
+μ∈X (cid:3)
+
+d(x , μ)2.
+
+(cid:7)
+
+x∈Ci
+
+Then, the k-means objective is
+
+Gk−means((X ,d),(C1, . . . ,Ck)) = k(cid:7)
+
+(cid:7)
+
+x∈Ci
+
+d(x , μi (Ci ))2.
+
+i=1
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:58:35, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.023
+
+22.2 k-Means and Other Cost Minimization Clusterings
+
+269
+
+This can also be rewritten as
+
+Gk−means((X ,d),(C1, . . . ,Ck)) = min
+
+μ1,...μk∈X (cid:3)
+
+k(cid:7)
+
+(cid:7)
+
+i=1
+
+x∈Ci
+
+d(x , μi )2.
+
+(22.1)
+
+The k-means objective function is relevant, for example, in digital communi-
+cation tasks, where the members of X may be viewed as a collection of signals
+that have to be transmitted. While X may be a very large set of real valued vec-
+tors, digital transmission allows transmitting of only a ﬁnite number of bits for
+each signal. One way to achieve good transmission under such constraints is to
+represent each member of X by a “close” member of some ﬁnite set μ1, . . . μk,
+and replace the transmission of any x ∈ X by transmitting the index of the
+closest μi . The k-means objective can be viewed as a measure of the distortion
+created by such a transmission representation scheme.
+
+The k-medoids objective function is similar to the k-means objective, except that
+it requires the cluster centroids to be members of the input set. The objective
+function is deﬁned by
+
+k(cid:7)
+
+(cid:7)
+
+i=1
+
+x∈Ci
+
+k(cid:7)
+
+(cid:7)
+
+GK−medoid((X ,d),(C1, . . . ,Ck)) = min
+μ1,...μk∈X
+
+d(x , μi )2.
+
+The k-median objective function is quite similar to the k-medoids objective,
+except that the “distortion” between a data point and the centroid of its cluster
+is measured by distance, rather than by the square of the distance:
+
+GK−median((X ,d),(C1, . . . ,Ck)) = min
+μ1,...μk∈X
+
+d(x , μi ).
+
+i=1
+
+x∈Ci
+
+An example where such an objective makes sense is the facility location prob-
+lem. Consider the task of locating k ﬁre stations in a city. One can model
+houses as data points and aim to place the stations so as to minimize the
+average distance between a house and its closest ﬁre station.
+
+The previous examples can all be viewed as center-based objectives. The solu-
+tion to such a clustering problem is determined by a set of cluster centers, and the
+clustering assigns each instance to the center closest to it. More generally, center-
+based objective is determined by choosing some monotonic function f : R+ → R+
+and then deﬁning
+
+G f ((X ,d),(C1, . . . Ck)) = min
+
+μ1,...μk∈X (cid:3)
+
+where X (cid:3)
+
+is either X or some superset of X .
+
+k(cid:7)
+
+(cid:7)
+
+i=1
+
+x∈Ci
+
+f (d(x , μi )),
+
+Some objective functions are not center based. For example, the sum of in-cluster
+
+distances (SOD)
+
+GSOD((X ,d),(C1, . . . Ck)) = k(cid:7)
+
+(cid:7)
+
+d(x , y)
+
+x ,y∈Ci
+
+i=1
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:58:35, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.023
+
+270
+
+Clustering
+
+and the MinCut objective that we shall discuss in Section 22.3 are not center-based
+objectives.
+
+22.2.1 The k-Means Algorithm
+The k-means objective function is quite popular in practical applications of clus-
+tering. However, it turns out that ﬁnding the optimal k-means solution is often
+computationally infeasible (the problem is NP-hard, and even NP-hard to approx-
+imate to within some constant). As an alternative, the following simple iterative
+algorithm is often used, so often that, in many cases, the term k-means Clustering
+refers to the outcome of this algorithm rather than to the clustering that minimizes
+the k-means objective cost. We describe the algorithm with respect to the Euclidean
+distance function d(x,y) = (cid:9)x− y(cid:9).
+
+k-Means
+
+input: X ⊂ Rn ; Number of clusters k
+initialize: Randomly choose initial centroids μ1, . . . , μk
+repeat until convergence
+∀i ∈ [k] set Ci = {x ∈ X : i = argmin j
+(break ties in some arbitrary manner)
+∀i ∈ [k] update μi = 1|Ci|
+
+(cid:9)x− μ j(cid:9)}
+
+x∈Ci x
+
+(cid:2)
+
+Lemma 22.1. Each iteration of the k-means algorithm does not increase the k-means
+objective function (as given in Equation (22.1)).
+
+Proof. To simplify the notation, let us use the shorthand G(C1, . . . ,Ck) for the
+k-means objective, namely,
+
+(cid:2)
+
+It
+argminμ∈Rn
+
+is convenient
+x∈Ci
+
+(cid:7)
+
+k(cid:7)
+G(C1, . . . ,Ck) = min
+(cid:2)
+(22.2)
+μ1,...,μk∈Rn
+x∈Ci
+i=1
+to deﬁne μ(Ci ) = 1|Ci|
+x∈Ci x and note that μ(Ci ) =
+(cid:9)x− μ(cid:9)2. Therefore, we can rewrite the k-means objective as
+(cid:7)
+G(C1, . . . ,Ck) = k(cid:7)
+
+(cid:9)x− μ(Ci )(cid:9)2.
+
+(cid:9)x− μi(cid:9)2.
+
+(22.3)
+
+, . . . ,C(t−1)
+Consider the update at iteration t of the k-means algorithm. Let C(t−1)
+1
+be the previous partition, let μ(t−1)
+, . . . ,C(t)
+k be the new
+partition assigned at iteration t. Using the deﬁnition of the objective as given in
+Equation (22.2) we clearly have that
+
+), and let C(t)
+1
+
+k
+
+i
+
+G(C(t)
+1
+
+, . . . ,C(t)
+
+(cid:9)x− μ(t−1)
+
+i
+
+(cid:9)2.
+
+(22.4)
+
+i=1
+
+x∈Ci
+
+i
+
+= μ(C(t−1)
+(cid:7)
+
+k ) ≤ k(cid:7)
+(cid:2)
+
+i=1
+
+x∈C(t)
+
+i
+
+(cid:2)
+
+In addition,
+minimizes the expression
+
+the deﬁnition of the new partition (C(t)
+1
+
+k
+i=1
+
+x∈Ci
+
+(cid:9)x − μ(t−1)
+
+i
+
+, . . . ,C(t)
+
+k ) implies that it
+(cid:9)2 over all possible partitions
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:58:35, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.023
+
+22.3 Spectral Clustering
+
+271
+
+(C1, . . . ,Ck). Hence,
+
+k(cid:7)
+
+(cid:7)
+
+i=1
+
+x∈C(t)
+
+i
+
+(cid:9)x− μ(t−1)
+
+i
+
+(cid:9)2 ≤ k(cid:7)
+
+i=1
+
+(cid:7)
+
+x∈C(t−1)
+
+i
+
+(cid:9)x− μ(t−1)
+
+i
+
+(cid:9)2.
+
+(22.5)
+
+Using Equation (22.3) we have that the right-hand side of Equation (22.5) equals
+G(C(t−1)
+, . . . ,C(t−1)
+). Combining this with Equation (22.4) and Equation (22.5), we
+obtain that G(C(t)
+, . . . ,C(t)
+1
+
+), which concludes our proof.
+
+k ) ≤ G(C(t−1)
+
+, . . . ,C(t−1)
+
+1
+
+1
+
+k
+
+k
+
+While the preceding lemma tells us that the k-means objective is monotonically
+nonincreasing, there is no guarantee on the number of iterations the k-means algo-
+rithm needs in order to reach convergence. Furthermore, there is no nontrivial lower
+bound on the gap between the value of the k-means objective of the algorithm’s
+output and the minimum possible value of that objective function. In fact, k-means
+might converge to a point which is not even a local minimum (see Exercise 22.2).
+To improve the results of k-means it is often recommended to repeat the procedure
+several times with different randomly chosen initial centroids (e.g., we can choose
+the initial centroids to be random points from the data).
+
+22.3 SPECTRAL CLUSTERING
+Often, a convenient way to represent the relationships between points in a data set
+X = {x1, . . . , xm} is by a similarity graph; each vertex represents a data point xi, and
+every two vertices are connected by an edge whose weight is their similarity, Wi , j =
+s(xi , x j ), where W ∈ Rm,m. For example, we can set Wi , j = exp( − d(xi , x j )2/σ 2),
+where d(·,·) is a distance function and σ is a parameter. The clustering problem can
+now be formulated as follows: We want to ﬁnd a partition of the graph such that the
+edges between different groups have low weights and the edges within a group have
+high weights.
+
+In the clustering objectives described previously, the focus was on one side of
+our intuitive deﬁnition of clustering – making sure that points in the same cluster
+are similar. We now present objectives that focus on the other requirement – points
+separated into different clusters should be nonsimilar.
+
+22.3.1 Graph Cut
+Given a graph represented by a similarity matrix W , the simplest and most direct
+way to construct a partition of the graph is to solve the mincut problem, which
+chooses a partition C1, . . . ,Ck that minimizes the objective
+
+cut(C1, . . . ,Ck) = k(cid:7)
+
+(cid:7)
+
+Wr,s.
+
+i=1
+
+r∈Ci ,s /∈Ci
+
+For k = 2, the mincut problem can be solved efﬁciently. However, in practice it
+often does not lead to satisfactory partitions. The problem is that in many cases, the
+solution of mincut simply separates one individual vertex from the rest of the graph.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:58:35, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.023
+
+272
+
+Clustering
+
+Of course, this is not what we want to achieve in clustering, as clusters should be
+reasonably large groups of points.
+
+Several solutions to this problem have been suggested. The simplest solution is
+
+to normalize the cut and deﬁne the normalized mincut objective as follows:
+
+RatioCut(C1, . . . ,Ck) = k(cid:7)
+
+(cid:7)
+
+1
+|Ci|
+
+i=1
+
+Wr,s.
+
+r∈Ci ,s /∈Ci
+
+The preceding objective assumes smaller values if the clusters are not too small.
+Unfortunately, introducing this balancing makes the problem computationally hard
+to solve. Spectral clustering is a way to relax the problem of minimizing RatioCut.
+
+22.3.2 Graph Laplacian and Relaxed Graph Cuts
+The main mathematical object for spectral clustering is the graph Laplacian matrix.
+There are several different deﬁnitions of graph Laplacian in the literature, and in
+the following we describe one particular deﬁnition.
+
+Di ,i =(cid:2)
+
+Deﬁnition 22.2 (Unnormalized Graph Laplacian). The unnormalized graph Lapla-
+cian is the m × m matrix L = D − W where D is a diagonal matrix with
+
+m
+j=1 Wi , j . The matrix D is called the degree matrix.
+
+The following lemma underscores the relation between RatioCut and the
+
+Laplacian matrix.
+Lemma 22.3. Let C1, . . . ,Ck be a clustering and let H ∈ Rm,k be the matrix such that
+
+Hi , j = 1√|C j| 1[i∈C j ].
+
+Then, the columns of H are orthonormal to each other and
+
+RatioCut(C1, . . . ,Ck) = trace(H
+
+(cid:12)
+
+L H ).
+
+Proof. Let h1, . . . ,hk be the columns of H . The fact that these vectors are orthonor-
+mal is immediate from the deﬁnition. Next, by standard algebraic manipulations, it
+(cid:12)
+k
+i=1 h
+i Lhi and that for any vector v we have
+can be shown that trace(H
+vr vs Wr,s +
+
+Wr,s (vr − vs)2.
+
+(cid:26)(cid:7)
+
+(cid:7)
+
+(cid:7)
+
+L H ) =(cid:2)
+(cid:7)
+
+− 2
+
+(cid:27)
+
+(cid:12)
+
+(cid:12)
+
+v
+
+Dr,r v2
+r
+
+Ds,sv2
+s
+
+Lv = 1
+2
+
+r
+
+r,s
+
+s
+
+= 1
+2
+
+r,s
+
+Applying this with v = hi and noting that (hi ,r − hi ,s)2 is nonzero only if r ∈ Ci ,s /∈ Ci
+or the other way around, we obtain that
+i Lhi = 1
+(cid:12)
+|Ci|
+h
+
+(cid:7)
+
+Wr,s.
+
+r∈Ci ,s /∈Ci
+
+Therefore, to minimize RatioCut we can search for a matrix H whose columns
+
+are orthonormal and such that each Hi , j is either 0 or 1/
+is an integer programming problem which we cannot solve efﬁciently. Instead, we
+
+(cid:22)|C j|. Unfortunately, this
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:58:35, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.023
+
+22.4 Information Bottleneck
+relax the latter requirement and simply search an orthonormal matrix H ∈ Rm,k
+that minimizes trace(H
+L H ). As we will see in the next chapter about PCA (par-
+ticularly, the proof of Theorem 23.2), the solution to this problem is to set U to
+be the matrix whose columns are the eigenvectors corresponding to the k min-
+imal eigenvalues of L. The resulting algorithm is called Unnormalized Spectral
+Clustering.
+
+(cid:12)
+
+273
+
+22.3.3 Unnormalized Spectral Clustering
+
+Unnormalized Spectral Clustering
+
+Input: W ∈ Rm,m ; Number of clusters k
+Initialize: Compute the unnormalized graph Laplacian L
+Let U ∈ Rm,k be the matrix whose columns are the eigenvectors of L
+
+corresponding to the k smallest eigenvalues
+
+Let v1, . . . ,vm be the rows of U
+Cluster the points v1, . . . ,vm using k-means
+Output: Clusters C1, . . . ,CK of the k-means algorithm
+
+The spectral clustering algorithm starts with ﬁnding the matrix H of the k eigen-
+vectors corresponding to the smallest eigenvalues of the graph Laplacian matrix. It
+then represents points according to the rows of H . It is due to the properties of the
+graph Laplacians that this change of representation is useful. In many situations,
+this change of representation enables the simple k-means algorithm to detect the
+clusters seamlessly. Intuitively, if H is as deﬁned in Lemma 22.3 then each point in
+the new representation is an indicator vector whose value is nonzero only on the
+element corresponding to the cluster it belongs to.
+
+22.4 INFORMATION BOTTLENECK*
+The information bottleneck method is a clustering technique introduced by Tishby,
+Pereira, and Bialek. It relies on notions from information theory. To illustrate the
+method, consider the problem of clustering text documents where each document
+is represented as a bag-of-words; namely, each document is a vector x = {0,1}n,
+where n is the size of the dictionary and xi = 1 iff the word corresponding to index
+i appears in the document. Given a set of m documents, we can interpret the bag-
+of-words representation of the m documents as a joint probability over a random
+variable x, indicating the identity of a document (thus taking values in [m]), and a
+random variable y, indicating the identity of a word in the dictionary (thus taking
+values in [n]).
+
+With this interpretation, the information bottleneck refers to the identity of a
+clustering as another random variable, denoted C, that takes values in [k] (where
+k will be set by the method as well). Once we have formulated x , y,C as random
+variables, we can use tools from information theory to express a clustering objective.
+In particular, the information bottleneck objective is
+I (x; C)− β I (C; y) ,
+
+min
+p(C|x)
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:58:35, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.023
+
+274
+
+Clustering
+where I (·;·) is the mutual information between two random variables,1 β is a param-
+eter, and the minimization is over all possible probabilistic assignments of points to
+clusters. Intuitively, we would like to achieve two contradictory goals. On one hand,
+we would like the mutual information between the identity of the document and
+the identity of the cluster to be as small as possible. This reﬂects the fact that we
+would like a strong compression of the original data. On the other hand, we would
+like high mutual information between the clustering variable and the identity of the
+words, which reﬂects the goal that the “relevant” information about the document
+(as reﬂected by the words that appear in the document) is retained. This generalizes
+the classical notion of minimal sufﬁcient statistics2 used in parametric statistics to
+arbitrary distributions.
+
+Solving the optimization problem associated with the information bottleneck
+principle is hard in the general case. Some of the proposed methods are similar
+to the EM principle, which we will discuss in Chapter 24.
+
+22.5 A HIGH-LEVEL VIEW OF CLUSTERING
+So far, we have mainly listed various useful clustering tools. However, some funda-
+mental questions remain unaddressed. First and foremost, what is clustering? What
+is it that distinguishes a clustering algorithm from any arbitrary function that takes
+an input space and outputs a partition of that space? Are there any basic properties
+of clustering that are independent of any speciﬁc algorithm or task?
+
+One method for addressing such questions is via an axiomatic approach. There
+have been several attempts to provide an axiomatic deﬁnition of clustering. Let us
+demonstrate this approach by presenting the attempt made by Kleinberg (2003).
+Consider a clustering function, F, that takes as input any ﬁnite domain X with a
+dissimilarity function d over its pairs and returns a partition of X .
+
+Consider the following three properties of such a function:
+Scale Invariance (SI) For any domain set X , dissimilarity function d, and any
+α > 0, the following should hold: F(X ,d) = F(X , αd) (where (αd)(x , y) def=
+α d(x , y)).
+Richness (Ri) For any ﬁnite X and every partition C = (C1, . . . Ck) of X (into
+nonempty subsets) there exists some dissimilarity function d over X such that
+F(X ,d) = C.
+are dissimilarity functions over X , such that for every
+(x , y) ≤ d(x , y)
+x , y ∈ X , if x , y belong to the same cluster in F(X ,d) then d
+(x , y) ≥ d(x , y), then
+and if x , y belong to different clusters in F(X ,d) then d
+F(X ,d) = F(X ,d
+
+Consistency (Co) If d and d
+
+).
+
+(cid:3)
+
+(cid:3)
+
+(cid:3)
+
+(cid:3)
+
+1 That is, given a probability function, p over the pairs (x,C), I (x; C) = (cid:2)
+
+(cid:2)
+
+a
+
+b p(a,b)log
+
+where the sum is over all values x can take and all values C can take.
+
+2 A sufﬁcient statistic is a function of the data which has the property of sufﬁciency with respect to a
+statistical model and its associated unknown parameter, meaning that “no other statistic which can be
+calculated from the same sample provides any additional information as to the value of the parameter.”
+For example, if we assume that a variable is distributed normally with a unit variance and an unknown
+expectation, then the average function is a sufﬁcient statistic.
+
+(cid:3)
+
+(cid:4)
+,
+
+p(a,b)
+p(a) p(b)
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:58:35, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.023
+
+22.5 A High-Level View of Clustering
+
+275
+
+A moment of reﬂection reveals that the Scale Invariance is a very natural
+requirement – it would be odd to have the result of a clustering function depend
+on the units used to measure between-point distances. The Richness requirement
+basically states that the outcome of the clustering function is fully controlled by
+the function d, which is also a very intuitive feature. The third requirement, Con-
+sistency, is the only requirement that refers to the basic (informal) deﬁnition of
+clustering – we wish that similar points will be clustered together and that dissimilar
+points will be separated to different clusters, and therefore, if points that already
+share a cluster become more similar, and points that are already separated become
+even less similar to each other, the clustering function should have even stronger
+“support” of its previous clustering decisions.
+
+However, Kleinberg (2003) has shown the following “impossibility” result:
+
+Theorem 22.4. There exists no function, F, that satisﬁes all the three properties: Scale
+Invariance, Richness, and Consistency.
+
+Proof. Assume, by way of contradiction, that some F does satisfy all three proper-
+ties. Pick some domain set X with at least three points. By Richness, there must be
+some d1 such that F(X ,d1) = {{x} : x ∈ X} and there also exists some d2 such that
+F(X ,d2) (cid:18)= F(X ,d1).
+Let α ∈ R+ be such that for every x , y ∈ X , αd2(x , y) ≥ d1(x , y). Let d3 =
+αd2. Consider F(X ,d3). By the Scale Invariance property of F, we should have
+F(X ,d3) = F(X ,d2). On the other hand, since all distinct x , y ∈ X reside in differ-
+ent clusters w.r.t. F(X ,d1), and d3(x , y) ≥ d1(x , y), the Consistency of F implies
+that F(X ,d3) = F(X ,d1). This is a contradiction, since we chose d1,d2 so that
+F(X ,d2) (cid:18)= F(X ,d1).
+
+It is important to note that there is no single “bad property” among the
+three properties. For every pair of the three axioms, there exist natural cluster-
+ing functions that satisfy the two properties in that pair (one can even construct
+such examples just by varying the stopping criteria for the Single Linkage cluster-
+ing function). On the other hand, Kleinberg shows that any clustering algorithm
+that minimizes any center-based objective function inevitably fails the consistency
+property (yet, the k-sum-of-in-cluster-distances minimization clustering does satisfy
+Consistency).
+
+The Kleinberg impossibility result can be easily circumvented by varying the
+properties. For example, if one wishes to discuss clustering functions that have
+a ﬁxed number-of-clusters parameter, then it is natural to replace Richness by k-
+Richness (namely, the requirement that every partition of the domain into k subsets
+is attainable by the clustering function). k-Richness, Scale Invariance and Consis-
+tency all hold for the k-means clustering and are therefore consistent. Alternatively,
+one can relax the Consistency property. For example, say that two clusterings
+l ) are compatible if for every clusters Ci ∈ C and
+C = (C1, . . . Ck) and C
+(cid:3)
+= ∅ (it is worthwhile noting that for
+, either Ci ⊆ C
+(cid:3)
+C
+j
+every dendrogram, every two clusterings that are obtained by trimming that den-
+drogram are compatible). “Reﬁnement Consistency” is the requirement that, under
+the assumptions of the Consistency property, the new clustering F(X ,d
+) is compat-
+ible with the old clustering F(X ,d). Many common clustering functions satisfy this
+
+, . . . C
+⊆ Ci or Ci ∩ C
+(cid:3)
+j
+
+(cid:3) = (C
+(cid:3)
+(cid:3)
+1
+j or C
+
+∈ C
+
+(cid:3)
+j
+
+(cid:3)
+
+(cid:3)
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:58:35, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.023
+
+276
+
+Clustering
+
+requirement as well as Scale Invariance and Richness. Furthermore, one can come
+up with many other, different, properties of clustering functions that sound intuitive
+and desirable and are satisﬁed by some common clustering functions.
+
+There are many ways to interpret these results. We suggest to view it as indi-
+cating that there is no “ideal” clustering function. Every clustering function will
+inevitably have some “undesirable” properties. The choice of a clustering function
+for any given task must therefore take into account the speciﬁc properties of that
+task. There is no generic clustering solution, just as there is no classiﬁcation algo-
+rithm that will learn every learnable task (as the No-Free-Lunch theorem shows).
+Clustering, just like classiﬁcation prediction, must take into account some prior
+knowledge about the speciﬁc task at hand.
+
+22.6 SUMMARY
+Clustering is an unsupervised learning problem, in which we wish to partition a set
+of points into “meaningful” subsets. We presented several clustering approaches
+including linkage-based algorithms, the k-means family, spectral clustering, and
+the information bottleneck. We discussed the difﬁculty of formalizing the intuitive
+meaning of clustering.
+
+22.7 BIBLIOGRAPHIC REMARKS
+The k-means algorithm is sometimes named Lloyd’s algorithm, after Stuart Lloyd,
+who proposed the method in 1957. For a more complete overview of spectral clus-
+tering we refer the reader to the excellent tutorial by Von Luxburg (2007). The
+information bottleneck method was introduced by Tishby, Pereira, and Bialek
+(1999). For an additional discussion on the axiomatic approach see Ackerman and
+Ben-David (2008).
+
+22.8 EXERCISES
+22.1 Suboptimality of k-Means: For every parameter t > 1, show that there exists an
+instance of the k-means problem for which the k-means algorithm (might) ﬁnd a
+solution whose k-means objective is at least t · OPT, where OPT is the minimum
+k-means objective.
+
+22.2 k-Means Might Not Necessarily Converge to a Local Minimum: Show that the k-
+means algorithm might converge to a point which is not a local minimum. Hint:
+Suppose that k = 2 and the sample points are {1,2,3,4} ⊂ R suppose we initialize
+the k-means with the centers {2,4}; and suppose we break ties in the deﬁnition of
+(cid:9)x− μj(cid:9).
+Ci by assigning i to be the smallest value in argmin j
+22.3 Given a metric space (X , d), where |X| < ∞, and k ∈ N, we would like to ﬁnd a
+partition of X into C1, . . . , Ck which minimizes the expression
+
+Gk−diam((X , d),(C1, . . . , Ck)) = max
+j∈[d]
+
+diam(Cj ),
+
+where diam(Cj ) = maxx,x(cid:3)∈Cj d(x, x
+|C j| < 2).
+Similarly to the k-means objective, it is NP-hard to minimize the k-diam objec-
+tive. Fortunately, we have a very simple approximation algorithm: Initially, we pick
+
+) (we use the convention diam(Cj ) = 0 if
+
+(cid:3)
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:58:35, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.023
+
+22.8 Exercises
+
+277
+
+some x ∈ X and set μ1 = x. Then, the algorithm iteratively sets
+d(x, μi ).
+
+∀ j ∈ {2, . . . , k}, μj = argmax
+x∈X
+
+min
+i∈[ j−1]
+
+Finally, we set
+
+∀i ∈ [k], Ci = {x ∈ X : i = argmin
+j∈[k]
+
+d(x, μj)}.
+
+Prove that the algorithm described is a 2-approximation algorithm. That is, if we
+denote its output by ˆC1, . . . , ˆCk, and denote the optimal solution by C
+∗
+k , then,
+
+∗
+1
+
+Gk−diam((X , d),( ˆC1, . . . , ˆCk)) ≤ 2· Gk−diam((X , d),(C
+
+∗
+1
+
+, . . . , C
+
+, . . . , C
+∗
+k )).
+
+Hint: Consider the point μk+1 (in other words, the next center we would have cho-
+sen, if we wanted k + 1 clusters). Let r = min j∈[k] d(μ j , μk+1). Prove the following
+inequalities
+
+Gk−diam((X , d),( ˆC1, . . . , ˆCk)) ≤ 2r
+k )) ≥ r.
+∗
+Gk−diam((X , d),(C
+
+, . . . , C
+
+∗
+1
+
+22.4 Recall that a clustering function, F,
+
+is called Center-Based Clustering if, for
+some monotonic function f : R+ → R+, on every given input (X , d), F(X , d) is
+a clustering that minimizes the objective
+
+G f ((X , d),(C1, . . .Ck)) = min
+
+μ1,...μk∈X (cid:3)
+
+where X (cid:3)
+
+is either X or some superset of X .
+
+k(cid:7)
+
+(cid:7)
+
+f (d(x, μi )),
+
+i=1
+
+x∈Ci
+
+Prove that for every k > 1 the k-diam clustering function deﬁned in the previous
+exercise is not a center-based clustering function.
+Hint: Given a clustering input (X , d), with |X| > 2, consider the effect of adding
+many close-by points to some (but not all) of the members of X , on either the
+k-diam clustering or any given center-based clustering.
+
+22.5 Recall that we discussed three clustering “properties”: Scale Invariance, Richness,
+
+and Consistency. Consider the Single Linkage clustering algorithm.
+1. Find which of the three properties is satisﬁed by Single Linkage with the Fixed
+
+Number of Clusters (any ﬁxed nonzero number) stopping rule.
+
+2. Find which of the three properties is satisﬁed by Single Linkage with the
+
+Distance Upper Bound (any ﬁxed nonzero upper bound) stopping rule.
+
+3. Show that for any pair of these properties there exists a stopping criterion for
+
+Single Linkage clustering, under which these two axioms are satisﬁed.
+
+22.6 Given some number k, let k-Richness be the following requirement:
+
+For any ﬁnite X and every partition C = (C1, . . .Ck) of X (into nonempty subsets)
+there exists some dissimilarity function d over X such that F(X , d) = C.
+
+Prove that, for every number k, there exists a clustering function that satisﬁes the
+
+three properties: Scale Invariance, k-Richness, and Consistency.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:58:35, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.023
+
+

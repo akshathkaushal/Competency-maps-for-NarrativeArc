@@ -1,0 +1,961 @@
+12
+
+Convex Learning Problems
+
+In this chapter we introduce convex learning problems. Convex learning comprises
+an important family of learning problems, mainly because most of what we can
+learn efﬁciently falls into it. We have already encountered linear regression with
+the squared loss and logistic regression, which are convex problems, and indeed
+they can be learned efﬁciently. We have also seen nonconvex problems, such as
+halfspaces with the 0-1 loss, which is known to be computationally hard to learn in
+the unrealizable case.
+
+In general, a convex learning problem is a problem whose hypothesis class is a
+convex set, and whose loss function is a convex function for each example. We begin
+the chapter with some required deﬁnitions of convexity. Besides convexity, we will
+deﬁne Lipschitzness and smoothness, which are additional properties of the loss
+function that facilitate successful learning. We next turn to deﬁning convex learning
+problems and demonstrate the necessity for further constraints such as Bounded-
+ness and Lipschitzness or Smoothness. We deﬁne these more restricted families of
+learning problems and claim that Convex-Smooth/Lipschitz-Bounded problems are
+learnable. These claims will be proven in the next two chapters, in which we will
+present two learning paradigms that successfully learn all problems that are either
+convex-Lipschitz-bounded or convex-smooth-bounded.
+
+Finally, in Section 12.3, we show how one can handle some nonconvex problems
+by minimizing “surrogate” loss functions that are convex (instead of the original
+nonconvex loss function). Surrogate convex loss functions give rise to efﬁcient
+solutions but might increase the risk of the learned predictor.
+
+12.1 CONVEXITY, LIPSCHITZNESS, AND SMOOTHNESS
+
+12.1.1 Convexity
+Deﬁnition 12.1 (Convex Set). A set C in a vector space is convex if for any two
+vectors u,v in C, the line segment between u and v is contained in C. That is, for any
+α ∈ [0,1] we have that αu+ (1− α)v ∈ C.
+
+124
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:47:39, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.013
+
+12.1 Convexity, Lipschitzness, and Smoothness
+
+125
+
+Examples of convex and nonconvex sets in R2 are given in the following. For the
+nonconvex sets, we depict two points in the set such that the line between the two
+points is not contained in the set.
+
+Nonconvex
+
+Convex
+
+Given α ∈ [0,1], the combination, αu + (1 − α)v of the points u,v is called a
+
+convex combination.
+Deﬁnition 12.2 (Convex Function). Let C be a convex set. A function f : C → R is
+convex if for every u,v ∈ C and α ∈ [0,1],
+
+f (αu+ (1− α)v) ≤ α f (u)+ (1− α) f (v).
+
+In words, f is convex if for any u,v, the graph of f between u and v lies below the
+line segment joining f (u) and f (v). An illustration of a convex function, f : R → R,
+is depicted in the following.
+
+f (v)
+
+α f (u) + (1 − α) f (v)
+
+f (α u + (1 − α)v)
+
+f (u)
+
+u
+α u + (1 − α)v
+
+v
+
+The epigraph of a function f is the set
+
+epigraph(f) = {(x, β) : f (x) ≤ β}.
+
+(12.1)
+
+It is easy to verify that a function f is convex if and only if its epigraph is a convex
+set. An illustration of a nonconvex function f : R → R, along with its epigraph, is
+given in the following.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:47:39, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.013
+
+126
+
+Convex Learning Problems
+
+f (x)
+
+x
+
+An important property of convex functions is that every local minimum of the
+function is also a global minimum. Formally, let B(u,r) = {v : (cid:9)v − u(cid:9) ≤ r} be a
+ball of radius r centered around u. We say that f (u) is a local minimum of f at
+u if there exists some r > 0 such that for all v ∈ B(u,r) we have f (v) ≥ f (u). It
+follows that for any v (not necessarily in B), there is a small enough α > 0 such that
+u+ α(v− u) ∈ B(u,r) and therefore
+
+f (u) ≤ f (u+ α(v− u)).
+
+(12.2)
+
+If f is convex, we also have that
+
+f (u+ α(v− u)) = f (αv+ (1− α)u) ≤ (1− α) f (u)+ α f (v).
+
+(12.3)
+Combining these two equations and rearranging terms, we conclude that f (u) ≤
+f (v). Since this holds for every v, it follows that f (u) is also a global minimum of f .
+Another important property of convex functions is that for every w we can
+construct a tangent to f at w that lies below f everywhere. If
+is differen-
+tiable, this tangent is the linear function l(u) = f (w) + (cid:7)∇ f (w),u − w(cid:8), where
+∇ f (w) is the gradient of f at w, namely, the vector of partial derivatives of f ,
+∇ f (w) =
+
+(cid:16)
+
+(cid:17)
+
+f
+
+∂ f (w)
+∂w1
+
+, . . . , ∂ f (w)
+∂wd
+∀u,
+
+. That is, for convex differentiable functions,
+f (u) ≥ f (w)+(cid:7)∇ f (w),u− w(cid:8).
+
+(12.4)
+
+In Chapter 14 we will generalize this inequality to nondifferentiable functions. An
+illustration of Equation (12.4) is given in the following.
+
+f (u)
+
+f(w) + 〈u − w, ∇f(w)〉
+
+f (w)
+
+w
+
+u
+
+If f is a scalar differentiable function, there is an easy way to check whether it is
+
+convex.
+Lemma 12.3. Let f : R → R be a scalar twice differential function, and let f
+(cid:3), f
+its ﬁrst and second derivatives, respectively. Then, the following are equivalent:
+
+(cid:3)(cid:3)
+
+be
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:47:39, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.013
+
+12.1 Convexity, Lipschitzness, and Smoothness
+
+127
+
+1.
+2.
+3.
+
+f is convex
+(cid:3)
+f
+(cid:3)(cid:3)
+f
+
+is monotonically nondecreasing
+is nonnegative
+
+(cid:3)(cid:3)
+
+Example 12.1.
+(x) = 2x and
+(cid:2) The scalar function f (x) = x 2 is convex. To see this, note that f
+(cid:2) The scalar function f (x) = log(1+ exp(x)) is convex. To see this, observe that
+exp(−x)+1. This is a monotonically increasing function since
+
+(x) = 2 > 0.
+(x) = exp(x)
+1+exp(x)
+f
+the exponent function is a monotonically increasing function.
+
+=
+
+1
+
+f
+
+(cid:3)
+
+(cid:3)
+
+The following claim shows that the composition of a convex scalar function with
+
+a linear function yields a convex vector-valued function.
+Claim 12.4. Assume that f : Rd → R can be written as f (w) = g((cid:7)w,x(cid:8)+ y), for some
+x ∈ Rd , y ∈ R, and g : R → R. Then, convexity of g implies the convexity of f .
+Proof. Let w1,w2 ∈ Rd and α ∈ [0,1]. We have
+
+f (αw1 + (1− α)w2) = g((cid:7)αw1 + (1− α)w2,x(cid:8)+ y)
+
+= g(α(cid:7)w1,x(cid:8)+ (1− α)(cid:7)w2,x(cid:8)+ y)
+= g(α((cid:7)w1,x(cid:8)+ y)+ (1− α)((cid:7)w2,x(cid:8)+ y))
+≤ αg((cid:7)w1,x(cid:8)+ y)+ (1− α)g((cid:7)w2,x(cid:8)+ y),
+
+where the last inequality follows from the convexity of g.
+
+Example 12.2.
+(cid:2) Given some x ∈ Rd and y ∈ R, let f : Rd → R be deﬁned as f (w) = ((cid:7)w,x(cid:8)− y)2.
+f is a composition of the function g(a) = a2 onto a linear function, and
+Then,
+hence f is a convex function.
+(cid:2) Given some x ∈ Rd and y ∈ {±1}, let f : Rd → R be deﬁned as f (w) = log(1 +
+exp(− y(cid:7)w,x(cid:8))). Then, f is a composition of the function g(a)= log(1+ exp(a))
+onto a linear function, and hence f is a convex function.
+
+Finally, the following lemma shows that the maximum of convex functions is
+convex and that a weighted sum of convex functions, with nonnegative weights, is
+also convex.
+Claim 12.5. For i = 1, . . . ,r, let
+functions from Rd to R are also convex.
+(cid:2) g(x) = maxi∈[r] fi (x)
+
+fi : Rd → R be a convex function. The following
+
+wi fi (x), where for all i, wi ≥ 0.
+
+r
+i=1
+
+(cid:2) g(x) =(cid:2)
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:47:39, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.013
+
+128
+
+Convex Learning Problems
+
+Proof. The ﬁrst claim follows by
+
+For the second claim
+
+fi (v)
+
+i
+
+i
+
+i
+
+i
+
+fi (αu + (1− α)v)
+[α fi (u)+ (1− α) fi (v)]
+fi (u)+ (1− α)max
+
+g(αu + (1− α)v) = max
+≤ max
+≤ α max
+= αg(u)+ (1− α)g(v).
+(cid:7)
+wi fi (αu + (1− α)v)
+(cid:7)
+wi [α fi (u)+ (1− α) fi (v)]
+(cid:7)
+(cid:7)
+wi fi (u)+ (1− α)
+= αg(u)+ (1− α)g(v).
+
+g(αu + (1− α)v) =
+≤
+
+= α
+
+i
+
+i
+
+i
+
+i
+
+wi fi (v)
+
+Example 12.3. The function g(x) = |x| is convex. To see this, note that g(x) =
+max{x ,−x} and that both the function f1(x) = x and f2(x) = −x are convex.
+
+12.1.2 Lipschitzness
+The deﬁnition of Lipschitzness that follows is with respect to the Euclidean norm
+over Rd. However, it is possible to deﬁne Lipschitzness with respect to any norm.
+Deﬁnition 12.6 (Lipschitzness). Let C ⊂ Rd. A function f : Rd → Rk is ρ-Lipschitz
+over C if for every w1,w2 ∈ C we have that (cid:9) f (w1)− f (w2)(cid:9) ≤ ρ(cid:9)w1 − w2(cid:9).
+
+Intuitively, a Lipschitz function cannot change too fast. Note that if f : R → R is
+
+differentiable, then by the mean value theorem we have
+(u)(w1 − w2),
+
+f (w1)− f (w2) = f
+
+(cid:3)
+
+where u is some point between w1 and w2. It follows that if the derivative of f is
+everywhere bounded (in absolute value) by ρ, then the function is ρ-Lipschitz.
+
+Example 12.4.
+(cid:2) The function f (x) = |x| is 1-Lipschitz over R. This follows from the triangle
+
+inequality: For every x1, x2,
+
+|x1|−|x2| = |x1 − x2 + x2|−|x2| ≤ |x1 − x2|+|x2|−|x2| = |x1 − x2|.
+
+Since this holds for both x1, x2 and x2, x1, we obtain that ||x1|−|x2|| ≤ |x1 − x2|.
+(cid:2) The function f (x) = log(1+ exp(x)) is 1-Lipschitz over R. To see this, observe
+
+that
+
+| f
+
+(cid:3)
+
+(x)| =
+
+(cid:14)(cid:14)(cid:14)(cid:14) exp(x)
+
+1+ exp(x)
+
+(cid:14)(cid:14)(cid:14)(cid:14) =
+
+(cid:14)(cid:14)(cid:14)(cid:14)
+
+1
+
+exp(− x)+ 1
+
+(cid:14)(cid:14)(cid:14)(cid:14) ≤ 1.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:47:39, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.013
+
+12.1 Convexity, Lipschitzness, and Smoothness
+(cid:2) The function f (x) = x 2 is not ρ-Lipschitz over R for any ρ. To see this, take
+
+129
+
+x1 = 0 and x2 = 1+ ρ, then
+
+f (x2)− f (x1) = (1+ ρ)2 > ρ(1+ ρ) = ρ|x2 − x1|.
+
+However, this function is ρ-Lipschitz over the set C = {x : |x| ≤ ρ/2}. Indeed, for
+any x1, x2 ∈ C we have
+
+|x 2
+
+1
+
+− x 2
+
+2
+
+| = |x1 + x2| |x1 − x2| ≤ 2(ρ/2)|x1 − x2| = ρ|x1 − x2|.
+
+(cid:2) The linear function f : Rd → R deﬁned by f (w) = (cid:7)v,w(cid:8) + b where v ∈ Rd is
+
+(cid:9)v(cid:9)-Lipschitz. Indeed, using Cauchy-Schwartz inequality,
+
+| f (w1)− f (w2)| = |(cid:7)v,w1 − w2(cid:8)| ≤ (cid:9)v(cid:9)(cid:9)w1 − w2(cid:9).
+
+The following claim shows that composition of Lipschitz functions preserves
+
+Lipschitzness.
+
+f (x) = g1(g2(x)), where g1 is ρ1-Lipschitz and g2 is ρ2-Lipschitz.
+Claim 12.7. Let
+Then, f is (ρ1ρ2)-Lipschitz. In particular, if g2 is the linear function, g2(x)=(cid:7)v,x(cid:8)+b,
+for some v ∈ Rd ,b ∈ R, then f is (ρ1(cid:9)v(cid:9))-Lipschitz.
+Proof.
+
+| f (w1)− f (w2)| = |g1(g2(w1))− g1(g2(w2))|
+
+≤ ρ1(cid:9)g2(w1)− g2(w2)(cid:9)
+≤ ρ1 ρ2(cid:9)w1 − w2(cid:9).
+
+12.1.3 Smoothness
+The deﬁnition of a smooth function relies on the notion of gradient. Recall that the
+gradient of a differentiable function f : Rd → R at w, denoted ∇ f (w), is the vector
+of partial derivatives of f , namely, ∇ f (w) =
+Deﬁnition 12.8 (Smoothness). A differentiable function f : Rd → R is β-smooth if
+its gradient is β-Lipschitz; namely, for all v,w we have (cid:9)∇ f (v)−∇ f (w)(cid:9)≤ β(cid:9)v−w(cid:9).
+
+, . . . , ∂ f (w)
+∂wd
+
+∂ f (w)
+∂w1
+
+(cid:16)
+
+(cid:17)
+
+.
+
+It is possible to show that smoothness implies that for all v,w we have
+
+f (v) ≤ f (w)+(cid:7)∇ f (w),v− w(cid:8)+ β
+2
+
+(12.5)
+Recall that convexity of f implies that f (v) ≥ f (w) + (cid:7)∇ f (w),v − w(cid:8). Therefore,
+when a function is both convex and smooth, we have both upper and lower bounds
+on the difference between the function and its ﬁrst order approximation.
+∇ f (w) in the right-hand side of Equation (12.5) and rearrang-
+
+(cid:9)v− w(cid:9)2.
+
+Setting v = w− 1
+β
+ing terms, we obtain
+
+(cid:9)∇ f (w)(cid:9)2 ≤ f (w)− f (v).
+
+1
+2β
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:47:39, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.013
+
+130
+
+Convex Learning Problems
+If we further assume that f (v) ≥ 0 for all v we conclude that smoothness implies the
+following:
+
+(cid:9)∇ f (w)(cid:9)2 ≤ 2β f (w).
+
+(12.6)
+
+A function that satisﬁes this property is also called a self-bounded function.
+
+Example 12.5.
+(cid:2) The function f (x) = x 2 is 2-smooth. This follows directly from the fact
+(x) = 2x. Note that for this particular function Equation (12.5) and
+(x) =
+
+(cid:2) The function f (x) = log(1 + exp(x)) is (1/4)-smooth. Indeed, since f
+
+that
+Equation (12.6) hold with equality.
+
+f
+
+(cid:3)
+
+(cid:3)
+
+1
+
+1+exp(−x) we have that
+
+| f
+(cid:3)
+
+Hence, f
+holds as well.
+
+(cid:3)(cid:3)
+
+(x)| =
+
+exp(− x)
+
+(1+ exp(− x))2
+
+=
+
+1
+
+(1+ exp(− x))(1+ exp(x))
+
+≤ 1/4.
+
+is (1/4)-Lipschitz. Since this function is nonnegative, Equation (12.6)
+
+The following claim shows that a composition of a smooth scalar function over a
+
+linear function preserves smoothness.
+Claim 12.9. Let f (w) = g((cid:7)w,x(cid:8)+ b), where g : R → R is a β-smooth function, x∈ Rd,
+and b ∈ R. Then, f is (β (cid:9)x(cid:9)2)-smooth.
+Proof. By the chain rule we have that ∇ f (w) = g
+is the
+derivative of g. Using the smoothness of g and the Cauchy-Schwartz inequality we
+therefore obtain
+
+((cid:7)w,x(cid:8) + b)x, where g
+
+(cid:3)
+
+(cid:3)
+
+f (v) = g((cid:7)v,x(cid:8)+ b)
+
+(cid:3)
+
+≤ g((cid:7)w,x(cid:8)+ b)+ g
+≤ g((cid:7)w,x(cid:8)+ b)+ g
+= f (w)+(cid:7)∇ f (w),v− w(cid:8)+ β(cid:9)x(cid:9)2
+
+((cid:7)w,x(cid:8)+ b)(cid:7)v− w,x(cid:8)+ β
+2
+((cid:7)w,x(cid:8)+ b)(cid:7)v− w,x(cid:8)+ β
+2
+(cid:9)v− w(cid:9)2.
+
+(cid:3)
+
+2
+
+((cid:7)v− w,x(cid:8))2
+((cid:9)v− w(cid:9)(cid:9)x(cid:9))2
+
+Example 12.6.
+(cid:2) For any x ∈ Rd and y ∈ R, let f (w) = ((cid:7)w,x(cid:8)− y)2. Then, f is (2(cid:9)x(cid:9)2)-smooth.
+(cid:2) For any x ∈ Rd and y ∈ {±1}, let f (w) = log(1 + exp( − y(cid:7)w,x(cid:8))). Then,
+f
+
+((cid:9)x(cid:9)2/4)-smooth.
+
+is
+
+12.2 CONVEX LEARNING PROBLEMS
+Recall that in our general deﬁnition of learning (Deﬁnition 3.4 in Chapter 3), we
+have a hypothesis class H, a set of examples Z, and a loss function (cid:9) : H × Z → R+.
+So far in the book we have mainly thought of Z as being the product of an instance
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:47:39, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.013
+
+131
+
+12.2 Convex Learning Problems
+space and a target space, Z = X × Y, and H being a set of functions from X to
+Y. However, H can be an arbitrary set. Indeed, throughout this chapter, we con-
+sider hypothesis classes H that are subsets of the Euclidean space Rd. That is, every
+hypothesis is some real-valued vector. We shall, therefore, denote a hypothesis in H
+by w. Now we can ﬁnally deﬁne convex learning problems:
+Deﬁnition 12.10 (Convex Learning Problem). A learning problem, (H, Z , (cid:9)),
+is
+called convex if the hypothesis class H is a convex set and for all z ∈ Z, the loss
+function, (cid:9)(·, z), is a convex function (where, for any z, (cid:9)(·, z) denotes the function
+f : H → R deﬁned by f (w) = (cid:9)(w, z)).
+
+Example 12.7 (Linear Regression with the Squared Loss). Recall that linear regres-
+sion is a tool for modeling the relationship between some “explanatory” variables
+and some real valued outcome (see Chapter 9). The domain set X is a subset of
+Rd, for some d, and the label set Y is the set of real numbers. We would like to
+learn a linear function h : Rd → R that best approximates the relationship between
+our variables. In Chapter 9 we deﬁned the hypothesis class as the set of homoge-
+nous linear functions, H = {x (cid:29)→ (cid:7)w,x(cid:8) : w ∈ Rd}, and used the squared loss function,
+(cid:9)(h,(x, y)) = (h(x)− y)2. However, we can equivalently model the learning problem
+as a convex learning problem as follows. Each linear function is parameterized by a
+vector w ∈ Rd. Hence, we can deﬁne H to be the set of all such parameters, namely,
+H = Rd. The set of examples is Z = X × Y = Rd × R = Rd+1, and the loss function
+is (cid:9)(w,(x, y)) = ((cid:7)w,x(cid:8)− y)2. Clearly, the set H is a convex set. The loss function is
+also convex with respect to its ﬁrst argument (see Example 12.2).
+
+If (cid:9) is a convex loss function and the class H is convex, then the
+Lemma 12.11.
+ERMH problem, of minimizing the empirical loss over H, is a convex optimization
+problem (that is, a problem of minimizing a convex function over a convex set).
+Proof. Recall that the ERMH problem is deﬁned by
+
+ERMH(S) = argmin
+w∈H
+
+L S(w).
+Since, for a sample S = z1, . . . , zm, for every w, L S(w) = 1
+(cid:9)(w, zi ), Claim 12.5
+implies that L S(w) is a convex function. Therefore, the ERM rule is a problem of
+minimizing a convex function subject to the constraint that the solution should be in
+a convex set.
+
+m
+i=1
+
+m
+
+(cid:2)
+
+Under mild conditions, such problems can be solved efﬁciently using generic
+optimization algorithms. In particular, in Chapter 14 we will present a very simple
+algorithm for minimizing convex functions.
+
+12.2.1 Learnability of Convex Learning Problems
+We have argued that for many cases, implementing the ERM rule for convex learn-
+ing problems can be done efﬁciently. But is convexity a sufﬁcient condition for the
+learnability of a problem?
+
+To make the quesion more speciﬁc: In VC theory, we saw that halfspaces in d-
+dimension are learnable (perhaps inefﬁciently). We also argued in Chapter 9 using
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:47:39, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.013
+
+132
+
+Convex Learning Problems
+
+the “discretization trick” that if the problem is of d parameters, it is learnable with
+a sample complexity being a function of d. That is, for a constant d, the problem
+should be learnable. So, maybe all convex learning problems over Rd, are learnable?
+Example 12.8 later shows that the answer is negative, even when d is low. Not
+all convex learning problems over Rd are learnable. There is no contradiction to
+VC theory since VC theory only deals with binary classiﬁcation while here we con-
+sider a wide family of problems. There is also no contradiction to the “discretization
+trick” as there we assumed that the loss function is bounded and also assumed that
+a representation of each parameter using a ﬁnite number of bits sufﬁces. As we will
+show later, under some additional restricting conditions that hold in many practical
+scenarios, convex problems are learnable.
+Example 12.8 (Nonlearnability of Linear Regression Even If d = 1). Let H= R, and
+the loss be the squared loss: (cid:9)(w,(x , y)) = (wx − y)2 (we’re referring to the homoge-
+nous case). Let A be any deterministic algorithm.1 Assume, by way of contradiction,
+that A is a successful PAC learner for this problem. That is, there exists a function
+m(·,·), such that for every distribution D and for every (cid:2), δ if A receives a training set
+of size m ≥ m((cid:2), δ), it should output, with probability of at least 1− δ, a hypothesis
+ˆw = A(S), such that LD( ˆw)− minw LD(w) ≤ (cid:2).
+
+Choose (cid:2) = 1/100, δ = 1/2, let m ≥ m((cid:2), δ), and set μ = log (100/99)
+
+. We will deﬁne
+two distributions, and will show that A is likely to fail on at least one of them. The
+ﬁrst distribution, D1, is supported on two examples, z1 = (1,0) and z2 = (μ,−1),
+where the probability mass of the ﬁrst example is μ while the probability mass of the
+second example is 1− μ. The second distribution, D2, is supported entirely on z2.
+Observe that for both distributions, the probability that all examples of the train-
+ing set will be of the second type is at least 99%. This is trivially true for D2, whereas
+for D1, the probability of this event is
+
+2m
+
+(1− μ)m ≥ e
+
+−2μm = 0.99.
+
+Since we assume that A is a deterministic algorithm, upon receiving a training
+set of m examples, each of which is (μ,−1), the algorithm will output some ˆw. Now,
+if ˆw < −1/(2μ), we will set the distribution to be D1. Hence,
+
+LD1( ˆw) ≥ μ( ˆw)2 ≥ 1/(4μ).
+LD1(w) ≤ LD1(0) = (1− μ).
+
+min
+w
+
+However,
+
+It follows that
+
+LD1( ˆw)− min
+
+w
+
+LD1(w) ≥ 1
+4μ
+
+− (1− μ) > (cid:2).
+
+ˆw ≥ −1/(2μ)
+Therefore, such algorithm A fails on D1. On the other hand,
+then we’ll set the distribution to be D2. Then we have that LD2( ˆw) ≥ 1/4 while
+minw LD2(w) = 0, so A fails on D2. In summary, we have shown that for every A
+there exists a distribution on which A fails, which implies that the problem is not
+PAC learnable.
+
+if
+
+1 Namely, given S the output of A is determined. This requirement is for the sake of simplicity. A slightly
+more involved argument will show that nondeterministic algorithms will also fail to learn the problem.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:47:39, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.013
+
+12.2 Convex Learning Problems
+
+133
+
+A possible solution to this problem is to add another constraint on the hypothesis
+class. In addition to the convexity requirement, we require that H will be bounded;
+namely, we assume that for some predeﬁned scalar B, every hypothesis w ∈ H
+satisﬁes (cid:9)w(cid:9) ≤ B.
+
+Boundedness and convexity alone are still not sufﬁcient for ensuring that the
+
+problem is learnable, as the following example demonstrates.
+
+Example 12.9. As in Example 12.8, consider a regression problem with the squared
+loss. However, this time let H = {w : |w| ≤ 1}⊂ R be a bounded hypothesis class. It is
+easy to verify that H is convex. The argument will be the same as in Example 12.8,
+except that now the two distributions, D1,D2 will be supported on z1 = (1/μ,0) and
+z2 = (1,−1). If the algorithm A returns ˆw < −1/2 upon receiving m examples of the
+second type, then we will set the distribution to be D1 and have that
+
+LD1( ˆw)− min
+
+LD1(w) ≥ μ( ˆw/μ)2 − LD1(0) ≥ 1/(4μ)− (1− μ) > (cid:2).
+
+w
+
+Similarly, if ˆw ≥ −1/2 we will set the distribution to be D2 and have that
+
+LD2( ˆw)− min
+
+LD2(w) ≥ (− 1/2+ 1)2 − 0 > (cid:2).
+
+w
+
+This example shows that we need additional assumptions on the learning prob-
+lem, and this time the solution is in Lipschitzness or smoothness of the loss function.
+This motivates a deﬁnition of two families of learning problems, convex-Lipschitz-
+bounded and convex-smooth-bounded, which are deﬁned later.
+
+12.2.2 Convex-Lipschitz/Smooth-Bounded Learning Problems
+Deﬁnition 12.12 (Convex-Lipschitz-Bounded Learning Problem). A learning prob-
+lem, (H, Z , (cid:9)), is called Convex-Lipschitz-Bounded, with parameters ρ, B if the
+following holds:
+(cid:2) The hypothesis class H is a convex set and for all w ∈ H we have (cid:9)w(cid:9) ≤ B.
+(cid:2) For all z ∈ Z, the loss function, (cid:9)(·, z), is a convex and ρ-Lipschitz function.
+Example 12.10. Let X = {x ∈ Rd : (cid:9)x(cid:9) ≤ ρ} and Y = R. Let H = {w ∈ Rd : (cid:9)w(cid:9) ≤ B}
+and let the loss function be (cid:9)(w,(x, y))=|(cid:7)w,x(cid:8)− y|. This corresponds to a regression
+problem with the absolute-value loss, where we assume that the instances are in a
+ball of radius ρ and we restrict the hypotheses to be homogenous linear functions
+deﬁned by a vector w whose norm is bounded by B. Then, the resulting problem is
+Convex-Lipschitz-Bounded with parameters ρ, B.
+
+Deﬁnition 12.13 (Convex-Smooth-Bounded Learning Problem). A learning prob-
+lem, (H, Z , (cid:9)),
+is called Convex-Smooth-Bounded, with parameters β, B if the
+following holds:
+(cid:2) The hypothesis class H is a convex set and for all w ∈ H we have (cid:9)w(cid:9) ≤ B.
+(cid:2) For all z ∈ Z, the loss function, (cid:9)(·, z), is a convex, nonnegative, and β-smooth
+
+function.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:47:39, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.013
+
+134
+
+Convex Learning Problems
+
+Note that we also required that the loss function is nonnegative. This is needed
+to ensure that the loss function is self-bounded, as described in the previous section.
+Example 12.11. Let X = {x∈ Rd : (cid:9)x(cid:9) ≤ β/2} and Y = R. Let H = {w ∈ Rd : (cid:9)w(cid:9) ≤ B}
+and let the loss function be (cid:9)(w,(x, y)) = ((cid:7)w,x(cid:8)− y)2. This corresponds to a regres-
+sion problem with the squared loss, where we assume that the instances are in a
+ball of radius β/2 and we restrict the hypotheses to be homogenous linear functions
+deﬁned by a vector w whose norm is bounded by B. Then, the resulting problem is
+Convex-Smooth-Bounded with parameters β, B.
+
+We claim that these two families of learning problems are learnable. That is, the
+properties of convexity, boundedness, and Lipschitzness or smoothness of the loss
+function are sufﬁcient for learnability. We will prove this claim in the next chapters
+by introducing algorithms that learn these problems successfully.
+
+12.3 SURROGATE LOSS FUNCTIONS
+As mentioned, and as we will see in the next chapters, convex problems can be
+learned effﬁciently. However, in many cases, the natural loss function is not convex
+and, in particular, implementing the ERM rule is hard.
+halfspaces with respect to the 0−1 loss. That is,
+
+As an example, consider the problem of learning the hypothesis class of
+
+(cid:9)0−1(w,(x, y)) = 1[y(cid:18)=sign((cid:7)w,x(cid:8))] = 1[y(cid:7)w,x(cid:8)≤0].
+
+This loss function is not convex with respect to w and indeed, when trying to min-
+imize the empirical risk with respect to this loss function we might encounter local
+minima (see Exercise 12.1). Furthermore, as discussed in Chapter 8, solving the
+ERM problem with respect to the 0−1 loss in the unrealizable case is known to be
+NP-hard.
+
+To circumvent the hardness result, one popular approach is to upper bound the
+nonconvex loss function by a convex surrogate loss function. As its name indicates,
+the requirements from a convex surrogate loss are as follows:
+
+1. It should be convex.
+2. It should upper bound the original loss.
+
+For example, in the context of learning halfspaces, we can deﬁne the so-called hinge
+loss as a convex surrogate for the 0−1 loss, as follows:
+
+(cid:9)hinge(w,(x, y)) def= max{0,1− y(cid:7)w,x(cid:8)}.
+
+Clearly, for all w and all (x, y), (cid:9)0−1(w,(x, y)) ≤ (cid:9)hinge(w,(x, y)). In addition, the
+convexity of the hinge loss follows directly from Claim 12.5. Hence, the hinge loss
+satisﬁes the requirements of a convex surrogate loss function for the zero-one loss.
+An illustration of the functions (cid:9)0−1 and (cid:9)hinge is given in the following.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:47:39, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.013
+
+12.4 Summary
+
+135
+
+(cid:2)hinge
+
+(cid:2)0 − 1
+
+1
+
+1
+
+y 〈w, x〉
+
+Once we have deﬁned the surrogate convex loss, we can learn the problem with
+respect to it. The generalization requirement from a hinge loss learner will have the
+form
+
+LhingeD (A(S)) ≤ min
+
+w∈H LhingeD (w)+ (cid:2),
+
+where LhingeD (w) = E(x,y)∼D [(cid:9)hinge(w,(x, y))]. Using the surrogate property, we can
+lower bound the left-hand side by L0−1D (A(S)), which yields
+w∈H LhingeD (w)+ (cid:2).
+(cid:20)
+w∈H LhingeD (w)− min
+
+(cid:21)
+w∈H L0−1D (w)
+
+We can further rewrite the upper bound as follows:
+
+L0−1D (A(S)) ≤ min
+
+L0−1D (A(S)) ≤ min
+
+w∈H L0−1D (w)+
+
++ (cid:2).
+
+min
+
+That is, the 0−1 error of the learned predictor is upper bounded by three terms:
+(cid:2) Approximation error: This is the term minw∈H L0−1D (w), which measures how
+well the hypothesis class performs on the distribution. We already elaborated
+on this error term in Chapter 5.
+(cid:2) Estimation error: This is the error that results from the fact that we only receive
+a training set and do not observe the distribution D. We already elaborated on
+this error term in Chapter 5.
+
+(cid:16)
+(cid:17)
+minw∈H LhingeD (w)− minw∈H L0−1D (w)
+
+that
+measures the difference between the approximation error with respect to the
+surrogate loss and the approximation error with respect to the original loss.
+The optimization error is a result of our inability to minimize the training loss
+with respect to the original loss. The size of this error depends on the speciﬁc
+distribution of the data and on the speciﬁc surrogate loss we are using.
+
+(cid:2) Optimization error: This is the term
+
+12.4 SUMMARY
+We introduced two families of learning problems: convex-Lipschitz-bounded and
+convex-smooth-bounded. In the next two chapters we will describe two generic
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:47:39, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.013
+
+136
+
+Convex Learning Problems
+
+learning algorithms for these families. We also introduced the notion of convex
+surrogate loss function, which enables us also to utilize the convex machinery for
+nonconvex problems.
+
+12.5 BIBLIOGRAPHIC REMARKS
+There are several excellent books on convex analysis and optimization (Boyd &
+Vandenberghe 2004, Borwein & Lewis 2006, Bertsekas 1999, Hiriart-Urruty &
+Lemaréchal 1993). Regarding learning problems, the family of convex-Lipschitz-
+bounded problems was ﬁrst studied by Zinkevich (2003) in the context of online
+learning and by Shalev-Shwartz, Shamir, Sridharan, and Srebro ((2009)) in the
+context of PAC learning.
+
+(cid:3)
+
+(cid:3)
+
+12.6 EXERCISES
+12.1 Construct an example showing that the 0−1 loss function may suffer from local
+minima; namely, construct a training sample S ∈ (X ×{±1})m (say, for X = R2), for
+which there exist a vector w and some (cid:2) > 0 such that
+1. For any w
+
+such that (cid:9)w− w(cid:3)(cid:9) ≤ (cid:2) we have L S(w) ≤ L S(w
+
+) (where the loss here
+
+is the 0−1 loss). This means that w is a local minimum of L S.
+
+∗
+global minimum of L S.
+
+such that L S(w
+
+2. There exists some w
+
+) < L S(w). This means that w is not a
+12.2 Consider the learning problem of logistic regression: Let H=X ={x∈ Rd :(cid:9)x(cid:9)≤ B},
+for some scalar B > 0, let Y = {±1}, and let the loss function (cid:9) be deﬁned as
+(cid:9)(w,(x, y)) = log(1 + exp ( − y(cid:7)w,x(cid:8))). Show that the resulting learning prob-
+lem is both convex-Lipschitz-bounded and convex-smooth-bounded. Specify the
+parameters of Lipschitzness and smoothness.
+12.3 Consider the problem of learning halfspaces with the hinge loss. We limit our
+domain to the Euclidean ball with radius R. That is, X ={x :(cid:9)x(cid:9)2 ≤ R}. The label set
+is Y = {±1} and the loss function (cid:9) is deﬁned by (cid:9)(w,(x, y)) = max{0,1 − y(cid:7)w,x(cid:8)}.
+We already know that the loss function is convex. Show that it is R-Lipschitz.
+
+∗
+
+12.4 (*) Convex-Lipschitz-Boundedness Is Not Sufﬁcient for Computational Efﬁciency:
+In the next chapter we show that from the statistical perspective, all convex-
+Lipschitz-bounded problems are learnable (in the agnostic PAC model). However,
+our main motivation to learn such problems resulted from the computational per-
+spective – convex optimization is often efﬁciently solvable. Yet the goal of this
+exercise is to show that convexity alone is not sufﬁcient for efﬁciency. We show
+that even for the case d = 1, there is a convex-Lipschitz-bounded problem which
+cannot be learned by any computable learner.
+Let the hypothesis class be H = [0,1] and let the example domain, Z, be the set of
+all Turing machines. Deﬁne the loss function as follows. For every Turing machine
+T ∈ Z, let (cid:9)(0, T ) = 1 if T halts on the input 0 and (cid:9)(0, T ) = 0 if T doesn’t halt on the
+input 0. Similarly, let (cid:9)(1, T )= 0 if T halts on the input 0 and (cid:9)(1, T )= 1 if T doesn’t
+halt on the input 0. Finally, for h ∈ (0,1), let (cid:9)(h, T ) = h(cid:9)(0, T )+ (1− h)(cid:9)(1, T ).
+1. Show that the resulting learning problem is convex-Lipschitz-bounded.
+2. Show that no computable algorithm can learn the problem.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:47:39, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.013
+
+

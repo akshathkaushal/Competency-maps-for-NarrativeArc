@@ -1,0 +1,94 @@
+# Poetry pyproject.toml: https://python-poetry.org/docs/pyproject/
+
+[build-system]
+requires = ["poetry>=1.0"]
+build-backend = "poetry.masonry.api"
+
+[tool.poetry]
+name = "competency_maps"
+version = "0.1.0"
+description = "competency_maps is a python cli/package that is used to create a competency map from a learning corpus"
+readme = "README.md"
+authors = [
+  "Shyam Kumar V N <shyam.vn@iiitb.org>"
+]
+license = "Apache-2.0"
+repository = "https://github.com/WSL-IIITB/CompetencyMaps"
+homepage = "https://github.com/WSL-IIITB/CompetencyMaps"
+
+# Keywords description https://python-poetry.org/docs/pyproject/#keywords
+keywords = []
+
+# Pypi classifiers: https://pypi.org/classifiers/
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[tool.poetry.scripts]
+# Entry points for the package https://python-poetry.org/docs/pyproject/#scripts
+"competency-maps" = "competency_maps.cli:interactive_main"
+"cmaps" = "competency_maps.__main__:app"
+
+[tool.poetry.dependencies]
+python = "^3.6.10"
+importlib_metadata = { version = "^1.6.0", python = "3.6.10" }
+typer = { extras = ["all"], version = "^0.2.1" }
+rich = "^2.2.2"
+pre-commit = "^2.5.1"
+pandas = "1.1.0"
+bs4 = "0.0.1"
+nltk = "3.5"
+spacy = "2.3.2"
+pyLDAvis = "2.1.2"
+matplotlib = "3.3.0"
+numpy = "1.19.1"
+scikit-learn = "0.23.1"
+botocore = "1.17.33"
+gensim = "3.8.3"
+"pdfminer.six" = "20200726"
+glove_python = { version = "0.1.0", optional = true }
+PyInquirer = {version = "1.0.3", optional = true }
+pyfiglet = {version = "0.8.post1", optional = true }
+top2vec="1.0.16"
+
+[tool.poetry.extras]
+glove = ["glove_python"]
+cli = ["PyInquirer", "pyfiglet"]
+
+[tool.poetry.dev-dependencies]
+darglint = "^1.4.1"
+isort = { extras = ["pyproject"], version = "^4.3.21" }
+pyupgrade = "^2.6.1"
+black = "^19.10b0"
+mypy = "^0.780"
+bandit = "^1.6.2"
+safety = "^1.9.0"
+pytest = "^5.4.3"
+pylint = "^2.5.3"
+pydocstyle = "^5.0.2"
+sphinx = "^2.2"
+sphinx-autodoc-typehints = "^1.10"
+doc8 = "^0.8"
+m2r = "^0.2"
+tomlkit = "^0.7"
+
+
+[tool.black]
+# https://github.com/psf/black
+line-length = 80
+target-version = ["py36"]
+
+[tool.isort]
+# https://github.com/timothycrosley/isort/
+known_typing = "typing,types,typing_extensions,mypy,mypy_extensions"
+sections = "FUTURE,TYPING,STDLIB,THIRDPARTY,FIRSTPARTY,LOCALFOLDER"
+include_trailing_comma = true
+default_section = "FIRSTPARTY"
+multi_line_output = 3
+indent = 4
+force_grid_wrap = 0
+use_parentheses = true
+line_length = 80

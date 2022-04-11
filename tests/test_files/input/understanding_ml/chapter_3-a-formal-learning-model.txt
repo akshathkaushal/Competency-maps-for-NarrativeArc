@@ -1,0 +1,614 @@
+3
+
+A Formal Learning Model
+
+In this chapter we deﬁne our main formal learning model – the PAC learning model
+and its extensions. We will consider other notions of learnability in Chapter 7.
+
+3.1 PAC LEARNING
+In the previous chapter we have shown that for a ﬁnite hypothesis class, if the ERM
+rule with respect to that class is applied on a sufﬁciently large training sample (whose
+size is independent of the underlying distribution or labeling function) then the out-
+put hypothesis will be probably approximately correct. More generally, we now
+deﬁneProbably Approximately Correct (PAC) learning.
+Deﬁnition 3.1 (PAC Learnability). A hypothesis class H is PAC learnable if there
+exist a function mH : (0,1)2 → N and a learning algorithm with the following prop-
+erty: For every (cid:14), δ ∈ (0,1), for every distribution D over X , and for every labeling
+function f : X → {0,1}, if the realizable assumption holds with respect to H,D, f ,
+then when running the learning algorithm on m ≥ mH((cid:14), δ) i.i.d. examples gener-
+ated by D and labeled by f , the algorithm returns a hypothesis h such that, with
+probability of at least 1− δ (over the choice of the examples), L(D, f )(h) ≤ (cid:14).
+
+The deﬁnition of Probably Approximately Correct learnability contains two
+approximation parameters. The accuracy parameter (cid:14) determines how far the out-
+put classiﬁer can be from the optimal one (this corresponds to the “approximately
+correct”), and a conﬁdence parameter δ indicating how likely the classiﬁer is to meet
+that accuracy requirement (corresponds to the “probably” part of “PAC”). Under
+the data access model that we are investigating, these approximations are inevitable.
+Since the training set is randomly generated, there may always be a small chance that
+it will happen to be noninformative (for example, there is always some chance that
+the training set will contain only one domain point, sampled over and over again).
+Furthermore, even when we are lucky enough to get a training sample that does
+faithfully represent D, because it is just a ﬁnite sample, there may always be some
+ﬁne details of D that it fails to reﬂect. Our accuracy parameter, (cid:14), allows “forgiving”
+the learner’s classiﬁer for making minor errors.
+
+22
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:37:42, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.004
+
+3.2 A More General Learning Model
+
+23
+
+Sample Complexity
+The function mH : (0,1)2 → N determines the sample complexity of learning H: that
+is, how many examples are required to guarantee a probably approximately correct
+solution. The sample complexity is a function of the accuracy ((cid:14)) and conﬁdence (δ)
+parameters. It also depends on properties of the hypothesis class H – for example,
+for a ﬁnite class we showed that the sample complexity depends on log the size of H.
+Note that if H is PAC learnable, there are many functions mH that satisfy the
+requirements given in the deﬁnition of PAC learnability. Therefore, to be precise,
+we will deﬁne the sample complexity of learning H to be the “minimal function,”
+in the sense that for any (cid:14), δ, mH((cid:14), δ) is the minimal integer that satisﬁes the
+requirements of PAC learning with accuracy (cid:14) and conﬁdence δ.
+
+Let us now recall the conclusion of the analysis of ﬁnite hypothesis classes from
+
+the previous chapter. It can be rephrased as stating:
+
+Corollary 3.2. Every ﬁnite hypothesis class is PAC learnable with sample complexity
+
+(cid:9)
+
+mH((cid:14), δ) ≤
+
+log(|H|/δ)
+
+(cid:14)
+
+(cid:10)
+
+.
+
+There are inﬁnite classes that are learnable as well (see, for example, Exercise
+3.3). Later on we will show that what determines the PAC learnability of a class is
+not its ﬁniteness but rather a combinatorial measure called the VC dimension.
+
+3.2 A MORE GENERAL LEARNING MODEL
+The model we have just described can be readily generalized, so that it can be
+made relevant to a wider scope of learning tasks. We consider generalizations in
+two aspects:
+
+Removing the Realizability Assumption
+We have required that the learning algorithm succeeds on a pair of data distribu-
+tion D and labeling function f provided that the realizability assumption is met. For
+practical learning tasks, this assumption may be too strong (can we really guaran-
+tee that there is a rectangle in the color-hardness space that fully determines which
+papayas are tasty?). In the next subsection, we will describe the agnostic PAC model
+in which this realizability assumption is waived.
+
+Learning Problems beyond Binary Classiﬁcation
+The learning task that we have been discussing so far has to do with predicting a
+binary label to a given example (like being tasty or not). However, many learning
+tasks take a different form. For example, one may wish to predict a real valued
+number (say, the temperature at 9:00 p.m. tomorrow) or a label picked from a ﬁnite
+set of labels (like the topic of the main story in tomorrow’s paper). It turns out
+that our analysis of learning can be readily extended to such and many other sce-
+narios by allowing a variety of loss functions. We shall discuss that in Section 3.2.2
+later.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:37:42, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.004
+
+24
+
+A Formal Learning Model
+
+3.2.1 Releasing the Realizability Assumption – Agnostic
+PAC Learning
+
+A More Realistic Model for the Data-Generating Distribution
+Recall that the realizability assumption requires that there exists h(cid:12) ∈ H such that
+Px∼D [h(cid:12)(x) = f (x)] = 1. In many practical problems this assumption does not hold.
+Furthermore, it is maybe more realistic not to assume that the labels are fully deter-
+mined by the features we measure on input elements (in the case of the papayas,
+it is plausible that two papayas of the same color and softness will have differ-
+ent taste). In the following, we relax the realizability assumption by replacing the
+“target labeling function” with a more ﬂexible notion, a data-labels generating
+distribution.
+Formally, from now on, let D be a probability distribution over X × Y, where,
+as before, X is our domain set and Y is a set of labels (usually we will consider
+Y = {0,1}). That is, D is a joint distribution over domain points and labels. One can
+view such a distribution as being composed of two parts: a distribution Dx over unla-
+beled domain points (sometimes called the marginal distribution) and a conditional
+probability over labels for each domain point, D((x , y)|x). In the papaya example,
+Dx determines the probability of encountering a papaya whose color and hardness
+fall in some color-hardness values domain, and the conditional probability is the
+probability that a papaya with color and hardness represented by x is tasty. Indeed,
+such modeling allows for two papayas that share the same color and hardness to
+belong to different taste categories.
+
+The empirical and the True Error Revised
+For a probability distribution, D, over X × Y, one can measure how likely h is to
+make an error when labeled points are randomly drawn according to D. We redeﬁne
+the true error (or risk) of a prediction rule h to be
+
+LD(h) def=
+
+(x ,y)∼D[h(x) (cid:18)= y] def= D({(x , y) : h(x) (cid:18)= y}).
+
+P
+
+(3.1)
+
+We would like to ﬁnd a predictor, h, for which that error will be minimized.
+However, the learner does not know the data generating D. What the learner does
+have access to is the training data, S. The deﬁnition of the empirical risk remains
+the same as before, namely,
+
+L S(h) def= |{i ∈ [m] : h(xi ) (cid:18)= yi}|
+
+m
+
+.
+
+Given S, a learner can compute L S(h) for any function h : X → {0,1}. Note that
+L S(h) = L D(uniform over S)(h).
+
+The Goal
+We wish to ﬁnd some hypothesis, h : X → Y, that (probably approximately)
+minimizes the true risk, L D(h).
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:37:42, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.004
+
+3.2 A More General Learning Model
+
+25
+
+The Bayes Optimal Predictor.
+Given any probability distribution D over X × {0,1}, the best label predicting
+function from X to {0,1} will be
+fD(x) =
+
+1 if P[y = 1|x] ≥ 1/2
+0 otherwise
+
+(cid:5)
+
+It is easy to verify (see Exercise 3.7) that for every probability distribution D, the
+Bayes optimal predictor fD is optimal, in the sense that no other classiﬁer, g : X →
+{0,1}, has a lower error. That is, for every classiﬁer g, LD( fD) ≤ LD(g).
+Unfortunately, since we do not know D, we cannot utilize this optimal predictor
+fD. What the learner does have access to is the training sample. We can now present
+the formal deﬁnition of agnostic PAC learnability, which is a natural extension of
+the deﬁnition of PAC learnability to the more realistic, nonrealizable, learning setup
+we have just discussed.
+
+Clearly, we cannot hope that the learning algorithm will ﬁnd a hypothesis whose
+error is smaller than the minimal possible error, that of the Bayes predictor. Fur-
+thermore, as we shall prove later, once we make no prior assumptions about the
+data-generating distribution, no algorithm can be guaranteed to ﬁnd a predictor that
+is as good as the Bayes optimal one. Instead, we require that the learning algorithm
+will ﬁnd a predictor whose error is not much larger than the best possible error of a
+predictor in some given benchmark hypothesis class. Of course, the strength of such
+a requirement depends on the choice of that hypothesis class.
+Deﬁnition 3.3 (Agnostic PAC Learnability). A hypothesis class H is agnostic PAC
+learnable if there exist a function mH : (0,1)2 → N and a learning algorithm with the
+following property: For every (cid:14), δ ∈ (0,1) and for every distribution D over X × Y,
+when running the learning algorithm on m ≥ mH((cid:14), δ) i.i.d. examples generated by
+D, the algorithm returns a hypothesis h such that, with probability of at least 1− δ
+(over the choice of the m training examples),
+
+LD(h) ≤ min
+
+h(cid:3)∈H LD(h
+
+(cid:3)
+
+)+ (cid:14).
+
+Clearly, if the realizability assumption holds, agnostic PAC learning provides the
+same guarantee as PAC learning. In that sense, agnostic PAC learning generalizes
+the deﬁnition of PAC learning. When the realizability assumption does not hold, no
+learner can guarantee an arbitrarily small error. Nevertheless, under the deﬁnition
+of agnostic PAC learning, a learner can still declare success if its error is not much
+larger than the best error achievable by a predictor from the class H. This is in
+contrast to PAC learning, in which the learner is required to achieve a small error in
+absolute terms and not relative to the best error achievable by the hypothesis class.
+
+3.2.2 The Scope of Learning Problems Modeled
+We next extend our model so that it can be applied to a wide variety of learning
+tasks. Let us consider some examples of different learning tasks.
+(cid:2) Multiclass Classiﬁcation Our classiﬁcation does not have to be binary. Take, for
+example, the task of document classiﬁcation: We wish to design a program that
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:37:42, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.004
+
+26
+
+A Formal Learning Model
+
+will be able to classify given documents according to topics (e.g., news, sports,
+biology, medicine). A learning algorithm for such a task will have access to
+examples of correctly classiﬁed documents and, on the basis of these examples,
+should output a program that can take as input a new document and output
+a topic classiﬁcation for that document. Here, the domain set
+is the set of all
+potential documents. Once again, we would usually represent documents by a
+set of features that could include counts of different key words in the document,
+as well as other possibly relevant features like the size of the document or its ori-
+gin. The label set in this task will be the set of possible document topics (so Y will
+be some large ﬁnite set). Once we determine our domain and label sets, the other
+components of our framework look exactly the same as in the papaya tasting
+example; Our training sample will be a ﬁnite sequence of (feature vector,label)
+pairs, the learner’s output will be a function from the domain set to the label
+set, and, ﬁnally, for our measure of success, we can use the probability, over
+(document, topic) pairs, of the event that our predictor suggests a wrong label.
+(cid:2) Regression In this task, one wishes to ﬁnd some simple pattern in the data – a
+functional relationship between the X and Y components of the data. For exam-
+ple, one wishes to ﬁnd a linear function that best predicts a baby’s birth weight
+on the basis of ultrasound measures of his head circumference, abdominal cir-
+cumference, and femur length. Here, our domain set X is some subset of R3 (the
+three ultrasound measurements), and the set of “labels,” Y, is the the set of real
+numbers (the weight in grams). In this context, it is more adequate to call Y the
+target set. Our training data as well as the learner’s output are as before (a ﬁnite
+sequence of (x , y) pairs, and a function from X to Y respectively). However,
+our measure of success is different. We may evaluate the quality of a hypothesis
+function, h : X → Y, by the expected square difference between the true labels
+and their predicted values, namely,
+LD(h) def=
+
+(3.2)
+
+(x ,y)∼D (h(x)− y)2.
+
+E
+
+To accommodate a wide range of learning tasks we generalize our formalism of
+
+the measure of success as follows:
+
+Generalized Loss Functions
+Given any set H (that plays the role of our hypotheses, or models) and some domain
+Z let (cid:2) be any function from H × Z to the set of nonnegative real numbers, (cid:2) :
+H× Z → R+. We call such functions loss functions.
+Note that for prediction problems, we have that Z =X ×Y. However, our notion
+of the loss function is generalized beyond prediction tasks, and therefore it allows
+Z to be any domain of examples (for instance, in unsupervised learning tasks such
+as the one described in Chapter 22, Z is not a product of an instance domain and a
+label domain).
+We now deﬁne the risk function to be the expected loss of a classiﬁer, h ∈ H, with
+
+respect to a probability distribution D over Z, namely,
+
+LD(h) def= E
+
+z∼D [(cid:2)(h, z)].
+
+(3.3)
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:37:42, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.004
+
+3.2 A More General Learning Model
+
+27
+
+That is, we consider the expectation of the loss of h over objects z picked ran-
+domly according to D. Similarly, we deﬁne the empirical risk to be the expected loss
+over a given sample S = (z1, . . . , zm) ∈ Z m, namely,
+
+L S(h) def= 1
+m
+
+(cid:2)(h, zi ).
+
+i=1
+
+(3.4)
+
+The loss functions used in the preceding examples of classiﬁcation and regression
+
+tasks are as follows:
+(cid:2) 0–1 loss: Here, our random variable z ranges over the set of pairs X ×Y and the
+
+loss function is
+
+(cid:2)0−1(h,(x , y)) def=
+
+if h(x) = y
+if h(x) (cid:18)= y
+
+0
+1
+
+m(cid:7)
+
+(cid:5)
+
+This loss function is used in binary or multiclass classiﬁcation problems.
+One should note that, for a random variable, α, taking the values {0,1},
+Eα∼D [α] = Pα∼D [α = 1]. Consequently, for this loss function, the deﬁnitions
+of LD(h) given in Equation (3.3) and Equation (3.1) coincide.
+(cid:2) Square Loss: Here, our random variable z ranges over the set of pairs X ×Y and
+
+the loss function is
+
+(cid:2)sq(h,(x , y)) def= (h(x)− y)2.
+
+This loss function is used in regression problems.
+
+We will later see more examples of useful instantiations of loss functions.
+To summarize, we formally deﬁne agnostic PAC learnability for general loss
+
+functions.
+
+Deﬁnition 3.4 (Agnostic PAC Learnability for General Loss Functions). A hypoth-
+esis class H is agnostic PAC learnable with respect to a set Z and a loss function
+(cid:2) : H × Z → R+, if there exist a function mH : (0,1)2 → N and a learning algorithm
+with the following property: For every (cid:14), δ ∈ (0,1) and for every distribution D over
+Z, when running the learning algorithm on m ≥ mH((cid:14), δ) i.i.d. examples generated
+by D, the algorithm returns h ∈ H such that, with probability of at least 1− δ (over
+the choice of the m training examples),
+
+LD(h) ≤ min
+
+h(cid:3)∈H LD(h
+
+(cid:3)
+
+)+ (cid:14),
+
+where LD(h) = Ez∼D [(cid:2)(h, z)].
+Remark 3.1 (A Note About Measurability*). In the aforementioned deﬁnition, for
+every h ∈ H, we view the function (cid:2)(h,·) : Z → R+ as a random variable and deﬁne
+LD(h) to be the expected value of this random variable. For that, we need to require
+that the function (cid:2)(h,·) is measurable. Formally, we assume that there is a σ -algebra
+of subsets of Z, over which the probability D is deﬁned, and that the preimage
+of every initial segment in R+ is in this σ -algebra. In the speciﬁc case of binary
+classiﬁcation with the 0−1 loss, the σ -algebra is over X ×{0,1} and our assumption
+on (cid:2) is equivalent to the assumption that for every h, the set {(x ,h(x)) : x ∈ X} is in
+the σ -algebra.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:37:42, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.004
+
+28
+
+A Formal Learning Model
+
+Remark 3.2 (Proper versus Representation-Independent Learning*). In the pre-
+ceding deﬁnition, we required that the algorithm will return a hypothesis from H.
+In some situations, H is a subset of a set H(cid:3)
+, and the loss function can be natu-
+rally extended to be a function from H(cid:3) × Z to the reals. In this case, we may allow
+(cid:3) ∈ H(cid:3)
+, as long as it satisﬁes the requirement
+the algorithm to return a hypothesis h
+) ≤ minh∈H LD(h) + (cid:14). Allowing the algorithm to output a hypothesis from
+LD(h
+H(cid:3)
+is called representation independent learning, while proper learning occurs when
+the algorithm must output a hypothesis from H. Representation independent learn-
+ing is sometimes called “improper learning,” although there is nothing improper in
+representation independent learning.
+
+(cid:3)
+
+3.3 SUMMARY
+In this chapter we deﬁned our main formal learning model – PAC learning. The
+basic model relies on the realizability assumption, while the agnostic variant does
+not impose any restrictions on the underlying distribution over the examples. We
+also generalized the PAC model to arbitrary loss functions. We will sometimes refer
+to the most general model simply as PAC learning, omitting the “agnostic” preﬁx
+and letting the reader infer what the underlying loss function is from the context.
+When we would like to emphasize that we are dealing with the original PAC setting
+we mention that the realizability assumption holds. In Chapter 7 we will discuss
+other notions of learnability.
+
+3.4 BIBLIOGRAPHIC REMARKS
+Our most general deﬁnition of agnostic PAC learning with general loss functions
+follows the works of Vladimir Vapnik and Alexey Chervonenkis (Vapnik and
+Chervonenkis 1971). In particular, we follow Vapnik’s general setting of learning
+(Vapnik 1982, Vapnik 1992, Vapnik 1995, Vapnik 1998).
+
+PAC learning was introduced by Valiant (1984). Valiant was named the winner
+of the 2010 Turing Award for the introduction of the PAC model. Valiant’s deﬁ-
+nition requires that the sample complexity will be polynomial in 1/(cid:14) and in 1/δ, as
+well as in the representation size of hypotheses in the class (see also Kearns and
+Vazirani (1994)). As we will see in Chapter 6, if a problem is at all PAC learnable
+then the sample complexity depends polynomially on 1/(cid:14) and log(1/δ). Valiant’s
+deﬁnition also requires that the runtime of the learning algorithm will be polyno-
+mial in these quantities. In contrast, we chose to distinguish between the statistical
+aspect of learning and the computational aspect of learning. We will elaborate on
+the computational aspect later on in Chapter 8, where we introduce the full PAC
+learning model of Valiant. For expository reasons, we use the term PAC learning
+even when we ignore the runtime aspect of learning. Finally, the formalization of
+agnostic PAC learning is due to Haussler (1992).
+
+3.5 EXERCISES
+3.1 Monotonicity of Sample Complexity: Let H be a hypothesis class for a binary clas-
+siﬁcation task. Suppose that H is PAC learnable and its sample complexity is given
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:37:42, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.004
+
+3.5 Exercises
+
+29
+
+3.2 Let X be a discrete domain, and let HSingleton = {hz : z ∈ X} ∪ {h
+
+by mH(·,·). Show that mH is monotonically nonincreasing in each of its parame-
+ters. That is, show that given δ ∈ (0,1), and given 0 < (cid:14)1 ≤ (cid:14)2 < 1, we have that
+mH((cid:14)1, δ) ≥ mH((cid:14)2, δ). Similarly, show that given (cid:14) ∈ (0,1), and given 0 < δ1 ≤ δ2 < 1,
+we have that mH((cid:14), δ1) ≥ mH((cid:14), δ2).
+−}, where for each
+z ∈ X , hz is the function deﬁned by hz(x) = 1 if x = z and hz(x) = 0 if x (cid:18)= z. h
+−
+(x) = 0. The realizability
+is simply the all-negative hypothesis, namely, ∀x ∈ X, h
+assumption here implies that the true hypothesis f labels negatively all examples in
+the domain, perhaps except one.
+1. Describe an algorithm that implements the ERM rule for learning HSingleton in
+2. Show that HSingleton is PAC learnable. Provide an upper bound on the sample
+3.3 Let X = R2, Y = {0,1}, and let H be the class of concentric circles in the plane, that
+is, H = {hr : r ∈ R+}, where hr (x) = 1[(cid:9)x(cid:9)≤r ]. Prove that H is PAC learnable (assume
+realizability), and its sample complexity is bounded by
+
+the realizable setup.
+
+complexity.
+
+−
+
+(cid:9)
+
+(cid:10)
+
+mH((cid:14), δ) ≤
+
+log(1/δ)
+
+(cid:14)
+
+.
+
+3.4 In this question, we study the hypothesis class of Boolean conjunctions deﬁned as
+follows. The instance space is X ={0,1}d and the label set is Y ={0,1}. A literal over
+the variables x1, . . . , xd is a simple Boolean function that takes the form f (x)= xi, for
+some i ∈ [d], or f (x) = 1− xi for some i ∈ [d]. We use the notation ¯xi as a shorthand
+for 1− xi . A conjunction is any product of literals. In Boolean logic, the product is
+denoted using the ∧ sign. For example, the function h(x) = x1 · (1− x2) is written as
+x1 ∧ ¯x2.
+We consider the hypothesis class of all conjunctions of literals over the d vari-
+ables. The empty conjunction is interpreted as the all-positive hypothesis (namely,
+the function that returns h(x) = 1 for all x). The conjunction x1 ∧ ¯x1 (and similarly
+any conjunction involving a literal and its negation) is allowed and interpreted as
+the all-negative hypothesis (namely, the conjunction that returns h(x) = 0 for all x).
+We assume realizability: Namely, we assume that there exists a Boolean conjunction
+that generates the labels. Thus, each example (x, y) ∈ X × Y consists of an assign-
+ment to the d Boolean variables x1, . . . , xd, and its truth value (0 for false and 1 for
+true).
+For instance, let d = 3 and suppose that the true conjunction is x1 ∧ ¯x2. Then, the
+training set S might contain the following instances:
+
+((1,1,1),0),((1,0,1),1),((0,1,0),0)((1,0,0),1).
+
+Prove that the hypothesis class of all conjunctions over d variables is PAC learn-
+able and bound its sample complexity. Propose an algorithm that implements the
+ERM rule, whose runtime is polynomial in d · m.
+3.5 Let X be a domain and let D1,D2, . . . ,Dm be a sequence of distributions over X . Let
+H be a ﬁnite class of binary classiﬁers over X and let f ∈ H. Suppose we are getting
+a sample S of m examples, such that the instances are independent but are not iden-
+tically distributed; the ith instance is sampled from Di and then yi is set to be f (xi).
+Let ¯Dm denote the average, that is, ¯Dm = (D1 +···+Dm)/m.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:37:42, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.004
+
+30
+
+A Formal Learning Model
+
+Fix an accuracy parameter (cid:14) ∈ (0,1). Show that
+
+(cid:12)
+(cid:11)
+∃h ∈ H s.t. L( ¯Dm , f )(h) > (cid:14) and L(S, f )(h) = 0
+
+P
+
+≤ |H|e
+
+−(cid:14)m.
+
+Hint: Use the geometric-arithmetic mean inequality.
+
+3.6 Let H be a hypothesis class of binary classiﬁers. Show that if H is agnostic PAC
+learnable, then H is PAC learnable as well. Furthermore, if A is a successful agnostic
+PAC learner for H, then A is also a successful PAC learner for H.
+3.7 (*) The Bayes optimal predictor: Show that for every probability distribution D, the
+Bayes optimal predictor fD is optimal, in the sense that for every classiﬁer g from
+X to {0,1}, LD( fD) ≤ LD(g).
+probability distribution, D, if
+
+3.8 (*) We say that a learning algorithm A is better than B with respect to some
+
+LD(A(S)) ≤ LD(B(S))
+
+for all samples S ∈ (X ×{0,1})m. We say that a learning algorithm A is better than B,
+if it is better than B with respect to all probability distributions D over X ×{0,1}.
+1. A probabilistic label predictor is a function that assigns to every domain point
+x a probability value, h(x) ∈ [0,1], that determines the probability of predicting
+the label 1. That is, given such an h and an input, x, the label for x is predicted by
+tossing a coin with bias h(x) toward Heads and predicting 1 iff the coin comes up
+Heads. Formally, we deﬁne a probabilistic label predictor as a function, h : X →
+[0,1]. The loss of such h on an example (x, y) is deﬁned to be |h(x)− y|, which is
+exactly the probability that the prediction of h will not be equal to y. Note that
+if h is deterministic, that is, returns values in {0,1}, then |h(x)− y| = 1[h(x)(cid:18)=y].
+Prove that for every data-generating distribution D over X × {0,1}, the Bayes
+optimal predictor has the smallest risk (w.r.t. the loss function (cid:2)(h,(x, y)) =
+|h(x)− y|, among all possible label predictors, including probabilistic ones).
+2. Let X be a domain and {0,1} be a set of labels. Prove that for every distribution
+D over X × {0,1}, there exist a learning algorithm AD that is better than any
+other learning algorithm with respect to D.
+D, and a learning algorithm B such that A is not better than B w.r.t. D.
+
+3. Prove that for every learning algorithm A there exist a probability distribution,
+
+3.9 Consider a variant of the PAC model in which there are two example oracles: one
+that generates positive examples and one that generates negative examples, both
+according to the underlying distribution D on X . Formally, given a target function
+f : X → {0,1}, let D+
+be the distribution over X + = {x ∈ X : f (x) = 1} deﬁned by
+(A) = D(A)/D(X +
+), for every A ⊂ X +
+D+
+is the distribution over X −
+induced by D.
+
+. Similarly, D−
+
+The deﬁnition of PAC learnability in the two-oracle model is the same as the
+standard deﬁnition of PAC learnability except that here the learner has access to
++
+H((cid:14), δ) i.i.d. examples from D+
+. The learner’s
+m
+goal is to output h s.t. with probability at least 1 − δ (over the choice of the two
+training sets, and possibly over the nondeterministic decisions made by the learning
+algorithm), both L(D+, f )(h) ≤ (cid:14) and L(D−, f )(h) ≤ (cid:14).
+1. (*) Show that if H is PAC learnable (in the standard one-oracle model), then H
+
+((cid:14), δ) i.i.d. examples from D−
+
+and m
+
+−
+
+is PAC learnable in the two-oracle model.
+
++
+
+−
+
+2. (**) Deﬁne h
+
+to be the always-plus hypothesis and h
+
+to be the always-minus
+− ∈ H. Show that if H is PAC learnable in the
+hypothesis. Assume that h
+two-oracle model, then H is PAC learnable in the standard one-oracle model.
+
++, h
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:37:42, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.004
+
+

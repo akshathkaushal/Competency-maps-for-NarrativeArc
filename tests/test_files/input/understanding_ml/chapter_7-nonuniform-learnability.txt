@@ -1,0 +1,1149 @@
+7
+
+Nonuniform Learnability
+
+The notions of PAC learnability discussed so far in the book allow the sample
+sizes to depend on the accuracy and conﬁdence parameters, but they are uniform
+with respect to the labeling rule and the underlying data distribution. Conse-
+quently, classes that are learnable in that respect are limited (they must have a
+ﬁnite VC-dimension, as stated by Theorem 6.7). In this chapter we consider more
+relaxed, weaker notions of learnability. We discuss the usefulness of such notions
+and provide characterization of the concept classes that are learnable using these
+deﬁnitions.
+
+We begin this discussion by deﬁning a notion of “nonuniform learnability” that
+allows the sample size to depend on the hypothesis to which the learner is com-
+pared. We then provide a characterization of nonuniform learnability and show that
+nonuniform learnability is a strict relaxation of agnostic PAC learnability. We also
+show that a sufﬁcient condition for nonuniform learnability is that H is a count-
+able union of hypothesis classes, each of which enjoys the uniform convergence
+property. These results will be proved in Section 7.2 by introducing a new learning
+paradigm, which is called Structural Risk Minimization (SRM). In Section 7.3 we
+specify the SRM paradigm for countable hypothesis classes, which yields the Min-
+imum Description Length (MDL) paradigm. The MDL paradigm gives a formal
+justiﬁcation to a philosophical principle of induction called Occam’s razor. Next,
+in Section 7.4 we introduce consistency as an even weaker notion of learnabil-
+ity. Finally, we discuss the signiﬁcance and usefulness of the different notions of
+learnability.
+
+7.1 NONUNIFORM LEARNABILITY
+“Nonuniform learnability” allows the sample size to be nonuniform with respect to
+the different hypotheses with which the learner is competing. We say that a hypoth-
+if, with probability higher than
+esis h is ((cid:2), δ)-competitive with another hypothesis h
+(1− δ),
+
+(cid:3)
+
+LD(h) ≤ LD(h
+
+(cid:3)
+
+)+ (cid:2).
+
+58
+
+Downloaded from https://www.cambridge.org/core. UCL, Institute of Education, on 17 Jul 2018 at 16:06:35, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.008
+
+7.1 Nonuniform Learnability
+
+59
+
+In PAC learnability, this notion of “competitiveness” is not very useful, as we
+are looking for a hypothesis with an absolute low risk (in the realizable case) or
+with a low risk compared to the minimal risk achieved by hypotheses in our class
+(in the agnostic case). Therefore, the sample size depends only on the accuracy and
+conﬁdence parameters. In nonuniform learnability, however, we allow the sample
+size to be of the form mH((cid:2), δ,h); namely, it depends also on the h with which we
+are competing. Formally,
+Deﬁnition 7.1. A hypothesis class H is nonuniformly learnable if there exist a
+learning algorithm, A, and a function mNULH : (0,1)2 × H → N such that, for every
+(cid:2), δ ∈ (0,1) and for every h ∈ H, if m ≥ mNULH ((cid:2), δ,h) then for every distribution D,
+with probability of at least 1− δ over the choice of S ∼ Dm, it holds that
+
+LD(A(S)) ≤ LD(h)+ (cid:2).
+
+At this point it might be useful to recall the deﬁnition of agnostic PAC learnabil-
+ity (Deﬁnition 3.3):
+A hypothesis class H is agnostically PAC learnable if there exist a learning algorithm,
+A, and a function mH : (0,1)2 → N such that, for every (cid:2), δ ∈ (0,1) and for every dis-
+tribution D, if m ≥ mH((cid:2), δ), then with probability of at least 1− δ over the choice of
+S ∼ Dm it holds that
+
+Note that this implies that for every h ∈ H
+
+LD(A(S)) ≤ min
+
+h(cid:3)∈H LD(h
+
+(cid:3)
+
+)+ (cid:2).
+
+LD(A(S)) ≤ LD(h)+ (cid:2).
+
+In both types of learnability, we require that the output hypothesis will be ((cid:2), δ)-
+competitive with every other hypothesis in the class. But the difference between
+these two notions of learnability is the question of whether the sample size m may
+depend on the hypothesis h to which the error of A(S) is compared. Note that that
+nonuniform learnability is a relaxation of agnostic PAC learnability. That is, if a
+class is agnostic PAC learnable then it is also nonuniformly learnable.
+
+7.1.1 Characterizing Nonuniform Learnability
+Our goal now is to characterize nonuniform learnability. In the previous chapter
+we have found a crisp characterization of PAC learnable classes, by showing that a
+class of binary classiﬁers is agnostic PAC learnable if and only if its VC-dimension is
+ﬁnite. In the following theorem we ﬁnd a different characterization for nonuniform
+learnable classes for the task of binary classiﬁcation.
+Theorem 7.2. A hypothesis class H of binary classiﬁers is nonuniformly learnable if
+and only if it is a countable union of agnostic PAC learnable hypothesis classes.
+
+of hypothesis classes, H =(cid:28)
+
+The proof of Theorem 7.2 relies on the following result of independent interest:
+Theorem 7.3. Let H be a hypothesis class that can be written as a countable union
+n∈NHn, where each Hn enjoys the uniform convergence
+property. Then, H is nonuniformly learnable.
+
+Downloaded from https://www.cambridge.org/core. UCL, Institute of Education, on 17 Jul 2018 at 16:06:35, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.008
+
+60
+
+Nonuniform Learnability
+
+Recall that in Chapter 4 we have shown that uniform convergence is sufﬁcient for
+agnostic PAC learnability. Theorem 7.3 generalizes this result to nonuniform learn-
+ability. The proof of this theorem will be given in the next section by introducing a
+new learning paradigm. We now turn to proving Theorem 7.2.
+
+Proof of Theorem 7.2. First assume that H =(cid:28)
+
+n∈NHn where each Hn is agnostic
+PAC learnable. Using the fundamental theorem of statistical learning, it follows
+that each Hn has the uniform convergence property. Therefore, using Theorem 7.3
+we obtain that H is nonuniform learnable.
+For the other direction, assume that H is nonuniform learnable using some
+algorithm A. For every n ∈ N, let Hn = {h ∈ H : mNULH (1/8,1/7,h) ≤ n}. Clearly,
+H =∪n∈NHn. In addition, using the deﬁnition of mNULH we know that for any distribu-
+tion D that satisﬁes the realizability assumption with respect to Hn, with probability
+of at least 6/7 over S ∼ Dn we have that LD(A(S)) ≤ 1/8. Using the fundamental
+theorem of statistical learning, this implies that the VC-dimension of Hn must be
+ﬁnite, and therefore Hn is agnostic PAC learnable.
+
+The following example shows that nonuniform learnability is a strict relax-
+ation of agnostic PAC learnability; namely, there are hypothesis classes that are
+nonuniform learnable but are not agnostic PAC learnable.
+
+R → R is a polynomial of degree n. Let H =(cid:28)
+
+Example 7.1. Consider a binary classiﬁcation problem with the instance domain
+being X = R. For every n ∈ N let Hn be the class of polynomial classiﬁers of degree
+n; namely, Hn is the set of all classiﬁers of the form h(x) = sign( p(x)) where p :
+n∈NHn. Therefore, H is the class
+of all polynomial classiﬁers over R. It is easy to verify that VCdim(H) = ∞ while
+VCdim(Hn) = n + 1 (see Exercise 7.12). Hence, H is not PAC learnable, while on
+the basis of Theorem 7.3, H is nonuniformly learnable.
+
+do so by ﬁrst assuming that H can be written as H =(cid:28)
+
+7.2 STRUCTURAL RISK MINIMIZATION
+So far, we have encoded our prior knowledge by specifying a hypothesis class H,
+which we believe includes a good predictor for the learning task at hand. Yet
+another way to express our prior knowledge is by specifying preferences over
+hypotheses within H. In the Structural Risk Minimization (SRM) paradigm, we
+n∈NHn and then specify-
+ing a weight function, w : N → [0,1], which assigns a weight to each hypothesis
+class, Hn, such that a higher weight reﬂects a stronger preference for the hypothesis
+class. In this section we discuss how to learn with such prior knowledge. In the next
+section we describe a couple of important weighting schemes, including Minimum
+Description Length.
+n∈NHn. For
+example, H may be the class of all polynomial classiﬁers where each Hn is the class
+of polynomial classiﬁers of degree n (see Example 7.1). Assume that for each n, the
+class Hn enjoys the uniform convergence property (see Deﬁnition 4.3 in Chapter 4)
+with a sample complexity function mUCHn ((cid:2), δ). Let us also deﬁne the function (cid:2)n :
+N× (0,1) → (0,1) by
+
+Concretely, let H be a hypothesis class that can be written as H =(cid:28)
+
+(cid:2)n(m, δ) = min{(cid:2) ∈ (0,1) : mUCHn ((cid:2), δ) ≤ m}.
+
+(7.1)
+
+Downloaded from https://www.cambridge.org/core. UCL, Institute of Education, on 17 Jul 2018 at 16:06:35, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.008
+
+7.2 Structural Risk Minimization
+
+61
+
+(cid:2)∞
+
+In words, we have a ﬁxed sample size m, and we are interested in the lowest possible
+upper bound on the gap between empirical and true risks achievable by using a
+sample of m examples.
+and δ, with probability of at least 1− δ over the choice of S ∼ Dm we have that
+
+From the deﬁnitions of uniform convergence and (cid:2)n, it follows that for every m
+
+∀h ∈ Hn, |LD(h)− L S(h)| ≤ (cid:2)n(m, δ).
+
+Let w : N → [0,1] be a function such that
+
+(7.2)
+w(n) ≤ 1. We refer to w as a
+weight function over the hypothesis classes H1,H2, . . .. Such a weight function can
+reﬂect the importance that the learner attributes to each hypothesis class, or some
+measure of the complexity of different hypothesis classes. If H is a ﬁnite union of N
+hypothesis classes, one can simply assign the same weight of 1/N to all hypothesis
+classes. This equal weighting corresponds to no a priori preference to any hypothesis
+class. Of course, if one believes (as prior knowledge) that a certain hypothesis class is
+more likely to contain the correct target function, then it should be assigned a larger
+weight, reﬂecting this prior knowledge. When H is a (countable) inﬁnite union of
+hypothesis classes, a uniform weighting is not possible but many other weighting
+schemes may work. For example, one can choose w(n) = 6
+−n. Later
+in this chapter we will provide another convenient way to deﬁne weighting functions
+using description languages.
+
+π 2n2 or w(n) = 2
+
+n=1
+
+hypothesis class that can be written as H =(cid:28)
+
+The SRM rule follows a “bound minimization” approach. This means that the
+goal of the paradigm is to ﬁnd a hypothesis that minimizes a certain upper bound
+on the true risk. The bound that the SRM rule wishes to minimize is given in the
+following theorem.
+Theorem 7.4. Let w : N → [0,1] be a function such that
+
+w(n) ≤ 1. Let H be a
+n∈NHn, where for each n, Hn satisﬁes
+the uniform convergence property with a sample complexity function mUCHn . Let (cid:2)n
+be as deﬁned in Equation (7.1). Then, for every δ ∈ (0,1) and distribution D, with
+probability of at least 1 − δ over the choice of S ∼ Dm, the following bound holds
+(simultaneously) for every n ∈ N and h ∈ Hn.
+
+(cid:2)∞
+
+n=1
+
+|LD(h)− L S(h)| ≤ (cid:2)n(m, w(n)· δ).
+
+Therefore, for every δ ∈ (0,1) and distribution D, with probability of at least 1− δ it
+holds that
+
+∀h ∈ H, LD(h) ≤ L S(h)+ min
+n:h∈Hn
+
+(7.3)
+Proof. For each n deﬁne δn = w(n)δ. Applying the assumption that uniform conver-
+gence holds for all n with the rate given in Equation (7.2), we obtain that if we ﬁx n
+in advance, then with probability of at least 1− δn over the choice of S ∼ Dm,
+
+(cid:2)n(m, w(n)· δ).
+
+Applying the union bound over n = 1,2, . . ., we obtain that with probability of at
+w(n) ≥ 1− δ, the preceding holds for all n, which concludes
+
+δn = 1− δ
+
+∀h ∈ Hn, |LD(h)− L S(h)| ≤ (cid:2)n(m, δn).
+(cid:2)
+
+least 1−(cid:2)
+
+n
+
+n
+
+our proof.
+
+Denote
+
+n(h) = min{n : h ∈ Hn},
+
+(7.4)
+
+Downloaded from https://www.cambridge.org/core. UCL, Institute of Education, on 17 Jul 2018 at 16:06:35, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.008
+
+62
+
+Nonuniform Learnability
+
+and then Equation (7.3) implies that
+
+LD(h) ≤ L S(h)+ (cid:2)n(h)(m, w(n(h))· δ).
+
+The SRM paradigm searches for h that minimizes this bound, as formalized in
+
+the following pseudocode:
+
+H =(cid:28)
+
+Structural Risk Minimization (SRM)
+
+n
+
+Hn where Hn has uniform convergence with mUCHn
+
+prior knowledge:
+w : N → [0,1] where
+deﬁne: (cid:2)n as in Equation (7.1); n(h) as in Equation (7.4)
+input: training set S ∼ Dm, conﬁdence δ
+output: h ∈ argminh∈H
+
+(cid:30)
+L S(h)+ (cid:2)n(h)(m, w(n(h))· δ)
+
+w(n) ≤ 1
+
+n
+
+(cid:2)
+(cid:29)
+
+Unlike the ERM paradigm discussed in previous chapters, we no longer just care
+about the empirical risk, L S(h), but we are willing to trade some of our bias toward
+low empirical risk with a bias toward classes for which (cid:2)n(h)(m, w(n(h))· δ) is smaller,
+for the sake of a smaller estimation error.
+
+Next we show that the SRM paradigm can be used for nonuniform learning of
+Theorem 7.5. Let H be a hypothesis class such that H =(cid:28)
+every class, which is a countable union of uniformly converging hypothesis classes.
+n∈NHn, where each Hn has
+the uniform convergence property with sample complexity mUCHn . Let w : N → [0,1] be
+such that w(n) = 6
+n2π 2 . Then, H is nonuniformly learnable using the SRM rule with
+(cid:17)
+rate
+
+(cid:16)
+
+mNULH ((cid:2), δ,h) ≤ mUCHn(h)
+
+(cid:2)/2 ,
+
+6δ
+
+(πn(h))2
+
+.
+
+Proof. Let A be the SRM algorithm with respect to the weighting function w. For
+w(n) = 1,
+every h ∈ H, (cid:2), and δ, let m ≥ mUCHn(h)
+we can apply Theorem 7.4 to get that, with probability of at least 1 − δ over the
+choice of S ∼ Dm, we have that for every h
+
+((cid:2), w(n(h))δ). Using the fact that
+
+(cid:3) ∈ H,
+
+n
+
+(cid:2)
+
+(cid:3)
+
+LD(h
+
+) ≤ L S(h
+
+(cid:3)
+
+)+ (cid:2)n(h(cid:3))(m, w(n(h
+
+(cid:3)
+
+))δ).
+
+(cid:29)
+
+LD(A(S)) ≤ min
+h(cid:3)
+
+The preceding holds in particular for the hypothesis A(S) returned by the SRM rule.
+By the deﬁnition of SRM we obtain that
+
+(cid:30) ≤ L S(h)+ (cid:2)n(h)(m, w(n(h))δ).
+Finally, if m ≥ mUCHn(h)((cid:2)/2, w(n(h))δ) then clearly (cid:2)n(h)(m, w(n(h))δ) ≤ (cid:2)/2. In addi-
+from the uniform convergence property of each Hn we have that with
+tion,
+probability of more than 1− δ,
+
+)+ (cid:2)n(h(cid:3))(m, w(n(h
+
+L S(h
+
+))δ)
+
+(cid:3)
+
+(cid:3)
+
+L S(h) ≤ LD(h)+ (cid:2)/2.
+
+Combining all the preceding we obtain that LD(A(S)) ≤ LD(h)+ (cid:2), which concludes
+our proof.
+
+Note that the previous theorem also proves Theorem 7.3.
+
+Downloaded from https://www.cambridge.org/core. UCL, Institute of Education, on 17 Jul 2018 at 16:06:35, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.008
+
+7.3 Minimum Description Length and Occam’s Razor
+
+63
+
+Remark 7.2 (No-Free-Lunch for Nonuniform Learnability). We have shown that
+any countable union of classes of ﬁnite VC-dimension is nonuniformly learnable. It
+turns out that, for any inﬁnite domain set, X , the class of all binary valued functions
+over X is not a countable union of classes of ﬁnite VC-dimension. We leave the
+proof of this claim as a (nontrivial) exercise (see Exercise 7.5). It follows that, in
+some sense, the No-Free-Lunch theorem holds for nonuniform learning as well:
+namely, whenever the domain is not ﬁnite, there exists no nonuniform learner with
+respect to the class of all deterministic binary classiﬁers (although for each such
+classiﬁer there exists a trivial algorithm that learns it – ERM with respect to the
+hypothesis class that contains only this classiﬁer).
+It is interesting to compare the nonuniform learnability result given in Theo-
+rem 7.5 to the task of agnostic PAC learning any speciﬁc Hn separately. The prior
+knowledge, or bias, of a nonuniform learner for H is weaker – it is searching for a
+model throughout the entire class H, rather than being focused on one speciﬁc Hn.
+The cost of this weakening of prior knowledge is the increase in sample complex-
+ity needed to compete with any speciﬁc h ∈ Hn. For a concrete evaluation of this
+gap, consider the task of binary classiﬁcation with the zero-one loss. Assume that
+for all n, VCdim(Hn) = n. Since mUCHn ((cid:2), δ) = C n+log (1/δ)
+(where C is the contant
+appearing in Theorem 6.8), a straightforward calculation shows that
+
+(cid:2)2
+
+mNULH ((cid:2), δ,h)− mUCHn ((cid:2)/2, δ) ≤ 4C
+
+2log(2n)
+
+.
+
+(cid:2)2
+
+That is, the cost of relaxing the learner’s prior knowledge from a speciﬁc Hn that
+contains the target h to a countable union of classes depends on the log of the index
+of the ﬁrst class in which h resides. That cost increases with the index of the class,
+which can be interpreted as reﬂecting the value of knowing a good priority order on
+the hypotheses in H.
+
+7.3 MINIMUM DESCRIPTION LENGTH AND OCCAM’S RAZOR
+of singleton classes, namely, H =(cid:28)
+Let H be a countable hypothesis class. Then, we can write H as a countable union
+n∈N{hn}. By Hoeffding’s inequality (Lemma 4.5),
+each singleton class has the uniform convergence property with rate mUC((cid:2), δ) =
+(cid:31)
+. Therefore, the function (cid:2)n given in Equation (7.1) becomes (cid:2)n(m, δ) =
+
+log (2/δ)
+
+2(cid:2)2
+log (2/δ)
+
+2m
+
+and the SRM rule becomes
+
+Equivalently, we can think of w as a function from H to [0,1], and then the SRM
+rule becomes
+
+(cid:13)
+
+(cid:13)
+
+(cid:23)
+
+(cid:23)
+
+L S(h)+
+
+argmin
+hn∈H
+
+−log(w(n))+ log (2/δ)
+
+2m
+
+L S(h)+
+
+argmin
+
+h∈H
+
+−log(w(h))+ log (2/δ)
+
+2m
+
+(cid:15)
+
+(cid:15)
+
+.
+
+.
+
+It follows that in this case, the prior knowledge is solely determined by the weight we
+assign to each hypothesis. We assign higher weights to hypotheses that we believe
+
+Downloaded from https://www.cambridge.org/core. UCL, Institute of Education, on 17 Jul 2018 at 16:06:35, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.008
+
+64
+
+Nonuniform Learnability
+
+are more likely to be the correct one, and in the learning algorithm we prefer
+hypotheses that have higher weights.
+In this section we discuss a particular convenient way to deﬁne a weight function
+over H, which is derived from the length of descriptions given to hypotheses. Hav-
+ing a hypothesis class, one can wonder about how we describe, or represent, each
+hypothesis in the class. We naturally ﬁx some description language. This can be
+English, or a programming language, or some set of mathematical formulas. In any
+of these languages, a description consists of ﬁnite strings of symbols (or characters)
+drawn from some ﬁxed alphabet. We shall now formalize these notions.
+Let H be the hypothesis class we wish to describe. Fix some ﬁnite set (cid:5) of sym-
+bols (or “characters”), which we call the alphabet. For concreteness, we let (cid:5) =
+{0,1}. A string is a ﬁnite sequence of symbols from (cid:5); for example, σ = (0,1,1,1,0)
+is a string of length 5. We denote by |σ| the length of a string. The set of all ﬁnite
+. A description language for H is a function d : H → (cid:5)∗
+length strings is denoted (cid:5)∗
+,
+mapping each member h of H to a string d(h). d(h) is called “the description of h,”
+and its length is denoted by |h|.
+
+(cid:3)
+
+We shall require that description languages be preﬁx-free; namely, for every dis-
+). That is, we do not allow that any string d(h)
+). Preﬁx-free collections of
+
+, d(h) is not a preﬁx of d(h
+
+tinct h,h
+is exactly the ﬁrst |h| symbols of any longer string d(h
+strings enjoy the following combinatorial property:
+Lemma 7.6 (Kraft Inequality). If S ⊆ {0,1}∗
+
+is a preﬁx-free set of strings, then
+
+(cid:3)
+
+(cid:3)
+
+(cid:7)
+
+σ∈S
+
+1
+
+2|σ| ≤ 1.
+
+Proof. Deﬁne a probability distribution over the members of S as follows: Repeat-
+edly toss an unbiased coin, with faces labeled 0 and 1, until the sequence of outcomes
+is a member of S; at that point, stop. For each σ ∈ S, let P(σ ) be the probability that
+this process generates the string σ . Note that since S is preﬁx-free, for every σ ∈S, if
+the coin toss outcomes follow the bits of σ then we will stop only once the sequence
+of outcomes equals σ . We therefore get that, for every σ ∈ S, P(σ ) = 1
+2|σ| . Since
+probabilities add up to at most 1, our proof is concluded.
+
+2|h| . This observation immediately yields the following:
+
+In light of Kraft’s inequality, any preﬁx-free description language of a hypothesis
+class, H, gives rise to a weighting function w over that hypothesis class – we will
+simply set w(h) = 1
+Theorem 7.7. Let H be a hypothesis class and let d : H → {0,1}∗
+be a preﬁx-free
+description language for H. Then, for every sample size, m, every conﬁdence param-
+eter, δ > 0, and every probability distribution, D, with probability greater than 1− δ
+over the choice of S ∼ Dm we have that,
+
+∀h ∈ H, LD(h) ≤ L S(h)+
+
+(cid:23)
+
+|h|+ ln(2/δ)
+
+2m
+
+,
+
+where |h| is the length of d(h).
+Proof. Choose w(h) = 1/2
+|h|
+) = |h|ln(2) < |h|.
+that ln(2
+
+|h|
+
+, apply Theorem 7.4 with (cid:2)n(m, δ) =
+
+(cid:31)
+
+ln(2/δ)
+2m , and note
+
+Downloaded from https://www.cambridge.org/core. UCL, Institute of Education, on 17 Jul 2018 at 16:06:35, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.008
+
+7.3 Minimum Description Length and Occam’s Razor
+
+65
+
+(cid:31)
+
+As was the case with Theorem 7.4, this result suggests a learning paradigm for
+H – given a training set, S, search for a hypothesis h ∈ H that minimizes the bound,
+L S(h) +
+. In particular, it suggests trading off empirical risk for saving
+description length. This yields the Minimum Description Length learning paradigm.
+
+|h|+ln(2/δ)
+
+2m
+
+Minimum Description Length (MDL)
+
+prior knowledge:
+H is a countable hypothesis class
+H is described by a preﬁx-free language over {0,1}
+For every h ∈ H, |h| is the length of the representation of h
+(cid:31)
+input: A training set S ∼ Dm, conﬁdence δ
+|h|+ln(2/δ)
+output: h ∈ argminh∈H
+
+L S(h)+
+
+(cid:24)
+
+(cid:25)
+
+2m
+
+Example 7.3. Let H be the class of all predictors that can be implemented using
+some programming language, say, C++. Let us represent each program using the
+binary string obtained by running the gzip command on the program (this yields
+a preﬁx-free description language over the alphabet {0,1}). Then, |h| is simply
+the length (in bits) of the output of gzip when running on the C++ program
+corresponding to h.
+
+7.3.1 Occam’s Razor
+Theorem 7.7 suggests that, having two hypotheses sharing the same empirical risk,
+the true risk of the one that has shorter description can be bounded by a lower value.
+Thus, this result can be viewed as conveying a philosophical message:
+
+A short explanation (that is, a hypothesis that has a short length) tends to be more
+valid than a long explanation.
+
+This is a well known principle, called Occam’s razor, after William of Ockham, a
+14th-century English logician, who is believed to have been the ﬁrst to phrase it
+explicitly. Here, we provide one possible justiﬁcation to this principle. The inequal-
+ity of Theorem 7.7 shows that the more complex a hypothesis h is (in the sense of
+having a longer description), the larger the sample size it has to ﬁt to guarantee that
+it has a small true risk, LD(h).
+
+At a second glance, our Occam razor claim might seem somewhat problematic.
+In the context in which the Occam razor principle is usually invoked in science, the
+language according to which complexity is measured is a natural language, whereas
+here we may consider any arbitrary abstract description language. Assume that we
+(cid:3)| is much smaller than |h|. By the preceding result,
+have two hypotheses such that |h
+if both have the same error on a given training set, S, then the true error of h may
+be much higher than the true error of h
+over h. However,
+we could have chosen a different description language, say, one that assigns a string
+. Suddenly it looks as if one should
+of length 3 to h and a string of length 100000 to h
+
+, so one should prefer h
+
+(cid:3)
+
+(cid:3)
+
+(cid:3)
+
+Downloaded from https://www.cambridge.org/core. UCL, Institute of Education, on 17 Jul 2018 at 16:06:35, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.008
+
+66
+
+Nonuniform Learnability
+
+prefer h over h
+ago that h
+
+(cid:3)
+
+(cid:3)
+
+. But these are the same h and h
+
+(cid:3)
+
+for which we argued two sentences
+
+should be preferable. Where is the catch here?
+
+(cid:31)
+
+Indeed, there is no inherent generalizability difference between hypotheses.
+The crucial aspect here is the dependency order between the initial choice of lan-
+guage (or, preference over hypotheses) and the training set. As we know from
+the basic Hoeffding’s bound (Equation (4.2)),
+if we commit to any hypothesis
+before seeing the data, then we are guaranteed a rather small estimation error term
+LD(h) ≤ L S(h)+
+ln(2/δ)
+2m . Choosing a description language (or, equivalently, some
+weighting of hypotheses) is a weak form of committing to a hypothesis. Rather than
+committing to a single hypothesis, we spread out our commitment among many. As
+long as it is done independently of the training sample, our generalization bound
+holds. Just as the choice of a single hypothesis to be evaluated by a sample can be
+arbitrary, so is the choice of description language.
+
+7.4 OTHER NOTIONS OF LEARNABILITY – CONSISTENCY
+The notion of learnability can be further relaxed by allowing the needed sample
+sizes to depend not only on (cid:2), δ, and h but also on the underlying data-generating
+probability distribution D (that is used to generate the training sample and to deter-
+mine the risk). This type of performance guarantee is captured by the notion of
+consistency1 of a learning rule.
+Deﬁnition 7.8 (Consistency). Let Z be a domain set, let P be a set of probability
+distributions over Z, and let H be a hypothesis class. A learning rule A is consistent
+with respect to H and P if there exists a function mCONH : (0,1)2 × H × P → N such
+that, for every (cid:2), δ ∈ (0,1), every h ∈ H, and every D ∈ P, if m ≥ mNULH ((cid:2), δ,h,D) then
+with probability of at least 1− δ over the choice of S ∼ Dm it holds that
+
+LD(A(S)) ≤ LD(h)+ (cid:2).
+
+If P is the set of all distributions,2 we say that A is universally consistent with respect
+to H.
+
+The notion of consistency is, of course, a relaxation of our previous notion of
+nonuniform learnability. Clearly if an algorithm nonuniformly learns a class H it is
+also universally consistent for that class. The relaxation is strict in the sense that
+there are consistent learning rules that are not successful nonuniform learners. For
+example, the algorithm Memorize deﬁned in Example 7.4 later is universally consis-
+tent for the class of all binary classiﬁers over N. However, as we have argued before,
+this class is not nonuniformly learnable.
+
+Example 7.4. Consider the classiﬁcation prediction algorithm Memorize deﬁned as
+follows. The algorithm memorizes the training examples, and, given a test point x, it
+
+1 In the literature, consistency is often deﬁned using the notion of either convergence in proba-
+bility (corresponding to weak consistency) or almost sure convergence (corresponding to strong
+consistency).
+
+2 Formally, we assume that Z is endowed with some sigma algebra of subsets (cid:6), and by “all distributions”
+we mean all probability distributions that have (cid:6) contained in their associated family of measurable
+subsets.
+
+Downloaded from https://www.cambridge.org/core. UCL, Institute of Education, on 17 Jul 2018 at 16:06:35, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.008
+
+7.5 Discussing the Different Notions of Learnability
+
+67
+
+predicts the majority label among all labeled instances of x that exist in the training
+sample (and some ﬁxed default label if no instance of x appears in the training set).
+It is possible to show (see Exercise 7.6) that the Memorize algorithm is universally
+consistent for every countable domain X and a ﬁnite label set Y (w.r.t. the zero-one
+loss).
+
+Intuitively, it is not obvious that the Memorize algorithm should be viewed as a
+learner, since it lacks the aspect of generalization, namely, of using observed data to
+predict the labels of unseen examples. The fact that Memorize is a consistent algo-
+rithm for the class of all functions over any countable domain set therefore raises
+doubt about the usefulness of consistency guarantees. Furthermore, the sharp-eyed
+reader may notice that the “bad learner” we introduced in Chapter 2, which led
+to overﬁtting, is in fact the Memorize algorithm. In the next section we discuss the
+signiﬁcance of the different notions of learnability and revisit the No-Free-Lunch
+theorem in light of the different deﬁnitions of learnability.
+
+7.5 DISCUSSING THE DIFFERENT NOTIONS OF LEARNABILITY
+We have given three deﬁnitions of learnability and we now discuss their usefulness.
+As is usually the case, the usefulness of a mathematical deﬁnition depends on what
+we need it for. We therefore list several possible goals that we aim to achieve by
+deﬁning learnability and discuss the usefulness of the different deﬁnitions in light of
+these goals.
+
+What Is the Risk of the Learned Hypothesis?
+The ﬁrst possible goal of deriving performance guarantees on a learning algorithm is
+bounding the risk of the output predictor. Here, both PAC learning and nonuniform
+learning give us an upper bound on the true risk of the learned hypothesis based on
+its empirical risk. Consistency guarantees do not provide such a bound. However, it
+is always possible to estimate the risk of the output predictor using a validation set
+(as will be described in Chapter 11).
+How Many Examples Are Required to Be as Good as the Best Hypothesis in H?
+When approaching a learning problem, a natural question is how many examples we
+need to collect in order to learn it. Here, PAC learning gives a crisp answer. How-
+ever, for both nonuniform learning and consistency, we do not know in advance
+how many examples are required to learn H. In nonuniform learning this num-
+ber depends on the best hypothesis in H, and in consistency it also depends on the
+underlying distribution. In this sense, PAC learning is the only useful deﬁnition of
+learnability. On the ﬂip side, one should keep in mind that even if the estimation
+error of the predictor we learn is small, its risk may still be large if H has a large
+approximation error. So, for the question “How many examples are required to be
+as good as the Bayes optimal predictor?” even PAC guarantees do not provide us
+with a crisp answer. This reﬂects the fact that the usefulness of PAC learning relies
+on the quality of our prior knowledge.
+
+PAC guarantees also help us to understand what we should do next if our learn-
+ing algorithm returns a hypothesis with a large risk, since we can bound the part
+
+Downloaded from https://www.cambridge.org/core. UCL, Institute of Education, on 17 Jul 2018 at 16:06:35, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.008
+
+68
+
+Nonuniform Learnability
+
+of the error that stems from estimation error and therefore know how much of the
+error is attributed to approximation error. If the approximation error is large, we
+know that we should use a different hypothesis class. Similarly, if a nonuniform
+algorithm fails, we can consider a different weighting function over (subsets of)
+hypotheses. However, when a consistent algorithm fails, we have no idea whether
+this is because of the estimation error or the approximation error. Furthermore,
+even if we are sure we have a problem with the estimation error term, we do not
+know how many more examples are needed to make the estimation error small.
+
+How to Learn? How to Express Prior Knowledge?
+Maybe the most useful aspect of the theory of learning is in providing an answer to
+the question of “how to learn.” The deﬁnition of PAC learning yields the limitation
+of learning (via the No-Free-Lunch theorem) and the necessity of prior knowledge.
+It gives us a crisp way to encode prior knowledge by choosing a hypothesis class,
+and once this choice is made, we have a generic learning rule – ERM. The deﬁnition
+of nonuniform learnability also yields a crisp way to encode prior knowledge by
+specifying weights over (subsets of) hypotheses of H. Once this choice is made, we
+again have a generic learning rule – SRM. The SRM rule is also advantageous in
+model selection tasks, where prior knowledge is partial. We elaborate on model
+selection in Chapter 11 and here we give a brief example.
+Consider the problem of ﬁtting a one dimensional polynomial to data; namely,
+our goal is to learn a function, h : R → R, and as prior knowledge we consider the
+hypothesis class of polynomials. However, we might be uncertain regarding which
+degree d would give the best results for our data set: A small degree might not ﬁt
+the data well (i.e., it will have a large approximation error), whereas a high degree
+might lead to overﬁtting (i.e., it will have a large estimation error). In the follow-
+ing we depict the result of ﬁtting a polynomial of degrees 2, 3, and 10 to the same
+training set.
+
+Degree 2
+
+Degree 3
+
+Degree 10
+
+It is easy to see that the empirical risk decreases as we enlarge the degree. There-
+fore, if we choose H to be the class of all polynomials up to degree 10 then the
+ERM rule with respect to this class would output a 10 degree polynomial and would
+overﬁt. On the other hand, if we choose too small a hypothesis class, say, polyno-
+mials up to degree 2, then the ERM would suffer from underﬁtting (i.e., a large
+approximation error). In contrast, we can use the SRM rule on the set of all polyno-
+mials, while ordering subsets of H according to their degree, and this will yield a 3rd
+degree polynomial since the combination of its empirical risk and the bound on its
+estimation error is the smallest. In other words, the SRM rule enables us to select
+the right model on the basis of the data itself. The price we pay for this ﬂexibility
+(besides a slight increase of the estimation error relative to PAC learning w.r.t. the
+
+Downloaded from https://www.cambridge.org/core. UCL, Institute of Education, on 17 Jul 2018 at 16:06:35, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.008
+
+7.5 Discussing the Different Notions of Learnability
+
+69
+
+optimal degree) is that we do not know in advance how many examples are needed
+to compete with the best hypothesis in H.
+
+Unlike the notions of PAC learnability and nonuniform learnability, the deﬁni-
+tion of consistency does not yield a natural learning paradigm or a way to encode
+prior knowledge. In fact, in many cases there is no need for prior knowledge at all.
+For example, we saw that even the Memorize algorithm, which intuitively should not
+be called a learning algorithm, is a consistent algorithm for any class deﬁned over
+a countable domain and a ﬁnite label set. This hints that consistency is a very weak
+requirement.
+
+Which Learning Algorithm Should We Prefer?
+One may argue that even though consistency is a weak requirement, it is desirable
+that a learning algorithm will be consistent with respect to the set of all functions
+from X to Y, which gives us a guarantee that for enough training examples, we will
+always be as good as the Bayes optimal predictor. Therefore, if we have two algo-
+rithms, where one is consistent and the other one is not consistent, we should prefer
+the consistent algorithm. However, this argument is problematic for two reasons.
+First, maybe it is the case that for most “natural” distributions we will observe in
+practice that the sample complexity of the consistent algorithm will be so large so
+that in every practical situation we will not obtain enough examples to enjoy this
+guarantee. Second, it is not very hard to make any PAC or nonuniform learner con-
+sistent with respect to the class of all functions from X to Y. Concretely, consider
+a countable domain, X , a ﬁnite label set Y, and a hypothesis class, H, of functions
+from X to Y. We can make any nonuniform learner for H be consistent with respect
+to the class of all classiﬁers from X to Y using the following simple trick: Upon
+receiving a training set, we will ﬁrst run the nonuniform learner over the training
+set, and then we will obtain a bound on the true risk of the learned predictor. If this
+bound is small enough we are done. Otherwise, we revert to the Memorize algorithm.
+This simple modiﬁcation makes the algorithm consistent with respect to all functions
+from X to Y. Since it is easy to make any algorithm consistent, it may not be wise to
+prefer one algorithm over the other just because of consistency considerations.
+
+7.5.1 The No-Free-Lunch Theorem Revisited
+Recall that the No-Free-Lunch theorem (Theorem 5.1 from Chapter 5) implies that
+no algorithm can learn the class of all classiﬁers over an inﬁnite domain. In contrast,
+in this chapter we saw that the Memorize algorithm is consistent with respect to the
+class of all classiﬁers over a countable inﬁnite domain. To understand why these two
+statements do not contradict each other, let us ﬁrst recall the formal statement of
+the No-Free-Lunch theorem.
+Let X be a countable inﬁnite domain and let Y = {±1}. The No-Free-Lunch
+theorem implies the following: For any algorithm, A, and a training set size, m,
+there exist a distribution over X and a function h(cid:7) : X → Y, such that if A will get
+a sample of m i.i.d. training examples, labeled by h(cid:7), then A is likely to return a
+classiﬁer with a larger error.
+The consistency of Memorize implies the following: For every distribution over
+X and a labeling function h(cid:7) : X → Y, there exists a training set size m (that depends
+
+Downloaded from https://www.cambridge.org/core. UCL, Institute of Education, on 17 Jul 2018 at 16:06:35, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.008
+
+70
+
+Nonuniform Learnability
+
+on the distribution and on h(cid:7)) such that if Memorize receives at least m examples it
+is likely to return a classiﬁer with a small error.
+
+We see that in the No-Free-Lunch theorem, we ﬁrst ﬁx the training set size, and
+then ﬁnd a distribution and a labeling function that are bad for this training set size.
+In contrast, in consistency guarantees, we ﬁrst ﬁx the distribution and the labeling
+function, and only then do we ﬁnd a training set size that sufﬁces for learning this
+particular distribution and labeling function.
+
+7.6 SUMMARY
+We introduced nonuniform learnability as a relaxation of PAC learnability and con-
+sistency as a relaxation of nonuniform learnability. This means that even classes of
+inﬁnite VC-dimension can be learnable, in some weaker sense of learnability. We
+discussed the usefulness of the different deﬁnitions of learnability.
+
+For hypothesis classes that are countable, we can apply the Minimum Descrip-
+tion Length scheme, where hypotheses with shorter descriptions are preferred,
+following the principle of Occam’s razor. An interesting example is the hypoth-
+esis class of all predictors we can implement in C++ (or any other programming
+language), which we can learn (nonuniformly) using the MDL scheme.
+
+Arguably, the class of all predictors we can implement in C++ is a powerful class
+of functions and probably contains all that we can hope to learn in practice. The abil-
+ity to learn this class is impressive, and, seemingly, this chapter should have been the
+last chapter of this book. This is not the case, because of the computational aspect
+of learning: that is, the runtime needed to apply the learning rule. For example, to
+implement the MDL paradigm with respect to all C++ programs, we need to per-
+form an exhaustive search over all C++ programs, which will take forever. Even the
+implementation of the ERM paradigm with respect to all C++ programs of descrip-
+tion length at most 1000 bits requires an exhaustive search over 21000 hypotheses.
+While the sample complexity of learning this class is just 1000+log(2/δ)
+, the runtime is
+≥ 21000. This is a huge number – much larger than the number of atoms in the visible
+universe. In the next chapter we formally deﬁne the computational complexity of
+learning. In the second part of this book we will study hypothesis classes for which
+the ERM or SRM schemes can be implemented efﬁciently.
+
+(cid:2)2
+
+7.7 BIBLIOGRAPHIC REMARKS
+Our deﬁnition of nonuniform learnability is related to the deﬁnition of an Occam-
+algorithm in Blumer, Ehrenfeucht, Haussler and Warmuth (1987). The concept of
+SRM is due to (Vapnik & Chervonenkis 1974, Vapnik 1995). The concept of MDL
+is due to (Rissanen 1978, Rissanen 1983). The relation between SRM and MDL
+is discussed in Vapnik (1995). These notions are also closely related to the notion
+of regularization (e.g., Tikhonov 1943). We will elaborate on regularization in the
+second part of this book.
+
+The notion of consistency of estimators dates back to Fisher (1922). Our pre-
+sentation of consistency follows Steinwart and Christmann (2008), who also derived
+several no-free-lunch theorems.
+
+Downloaded from https://www.cambridge.org/core. UCL, Institute of Education, on 17 Jul 2018 at 16:06:35, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.008
+
+7.8 Exercises
+
+71
+
+7.8 EXERCISES
+7.1 Prove that for any ﬁnite class H, and any description language d : H → {0,1}∗
+
+, the
+VC-dimension of H is at most 2sup{|d(h)| : h ∈ H} – the maximum description length
+of a predictor in H. Furthermore, if d is a preﬁx-free description then VCdim(H) ≤
+sup{|d(h)| : h ∈ H}.
+7.2 Let H ={hn : n ∈ N} be an inﬁnite countable hypothesis class for binary classiﬁcation.
+Show that it is impossible to assign weights to the hypotheses in H such that
+(cid:2) H could be learned nonuniformly using these weights. That is, the weighting
+(cid:2) The weights would be monotonically nondecreasing. That is, if i < j, then
+Hn, where for every n ∈ N, Hn is ﬁnite.
+h∈H w(h) ≤ 1 and so that for
+(cid:2) (*) Deﬁne such a function w when for all n Hn is countable (possibly inﬁnite).
+7.4 Let H be some hypothesis class. For any h ∈ H, let |h| denote the description length
+of h, according to some ﬁxed description language. Consider the MDL learning
+paradigm in which the algorithm returns:
+
+function w : H → [0,1] should satisfy the condition
+w(hi) ≤ w(h j).
+(cid:2)
+Find a weighting function w : H → [0,1] such that
+all h ∈ H, w(h) is determined by n(h) = min{n : h ∈ Hn} and by |Hn(h)|.
+
+7.3 (cid:2) Consider a hypothesis class H =(cid:28)∞
+
+(cid:2)
+h∈H w(h) ≤ 1.
+
+n=1
+
+(cid:13)
+
+(cid:23)
+
+h S ∈ argmin
+h∈H
+
+L S(h)+
+
+|h|+ ln(2/δ)
+
+2m
+
+(cid:15)
+
+,
+
+where S is a sample of size m. For any B > 0, let HB = {h ∈ H : |h| ≤ B}, and deﬁne
+
+∗
+B
+
+= arg min
+h
+h∈HB
+Prove a bound on LD(h S)− LD(h
+∗
+B) in terms of B, the conﬁdence parameter δ, and
+the size of the training set m.
+(cid:2) Note: Such bounds are known as oracle inequalities in the literature: We wish to
+∗
+B.
+
+estimate how good we are compared to a reference classiﬁer (or “oracle”) h
+
+LD(h).
+
+7.5 In this question we wish to show a No-Free-Lunch result for nonuniform learnabil-
+ity: namely, that, over any inﬁnite domain, the class of all functions is not learnable
+even under the relaxed nonuniform variation of learning.
+Recall that an algorithm, A, nonuniformly learns a hypothesis class H if there
+exists a function mNULH : (0,1)2×H → N such that, for every (cid:2), δ ∈ (0,1) and for every
+h ∈ H, if m ≥ mNULH ((cid:2), δ, h) then for every distribution D, with probability of at least
+1− δ over the choice of S ∼ Dm, it holds that
+
+LD(A(S))≤ LD(h)+ (cid:2).
+
+n∈NHn and, for every n ∈ N, VCdim(Hn) is ﬁnite.
+
+If such an algorithm exists then we say that H is nonuniformly learnable.
+1. Let A be a nonuniform learner for a class H. For each n ∈ N deﬁne HA
+= {h ∈ H :
+mNUL(0. 1,0. 1, h) ≤ n}. Prove that each such class Hn has a ﬁnite VC-dimension.
+H =(cid:28)
+2. Prove that if a class H is nonuniformly learnable then there are classes Hn so that
+classes (Hn : n ∈ N) such that H = (cid:28)
+3. Let H be a class that shatters an inﬁnite set. Then, for every sequence of
+n∈NHn, there exists some n for which
+VCdim(Hn) = ∞.
+Hint: Given a class H that shatters some inﬁnite set K , and a sequence of classes
+(Hn : n ∈ N), each having a ﬁnite VC-dimension, start by deﬁning subsets Kn ⊆ K
+such that, for all n, |Kn| > VCdim(Hn) and for any n (cid:18)= m, Kn ∩ Km =∅. Now, pick
+
+n
+
+Downloaded from https://www.cambridge.org/core. UCL, Institute of Education, on 17 Jul 2018 at 16:06:35, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.008
+
+72
+
+Nonuniform Learnability
+
+(cid:4)
+
+that f ∈(cid:3)H\(cid:28)
+
+for each such Kn a function fn : Kn → {0,1} so that no h ∈ Hn agrees with fn on
+the domain Kn. Finally, deﬁne f : X → {0,1} by combining these fn’s and prove
+5. Construct a class H1 of functions from the unit interval [0,1] to {0,1} that is
+6. Construct a class H2 of functions from the unit interval [0,1] to {0,1} that is not
+
+nonuniformly learnable but not PAC learnable.
+
+n∈NHn
+
+.
+
+nonuniformly learnable.
+
+7.6 In this question we wish to show that the algorithm Memorize is a consistent learner
+for every class of (binary-valued) functions over any countable domain. Let X be a
+countable domain and let D be a probability distribution over X .
+1. Let {xi : i ∈ N} be an enumeration of the elements of X so that for all i ≤ j,
+
+D({xi}) ≤ D({xj}). Prove that
+
+(cid:7)
+
+lim
+n→∞
+
+i≥n
+
+D({xi}) = 0.
+
+m ∈ N,
+
+2. Given any (cid:2) > 0 prove that there exists (cid:2)D > 0 such that
+D({x ∈ X : D({x}) < (cid:2)D}) < (cid:2).
+
+3. Prove that for every η > 0, if n is such that D({xi}) < η for all i > n, then for every
+
+[∃xi : (D({xi}) > η and xi /∈ S)] ≤ ne
+
+−ηm.
+
+P
+
+S∼Dm
+
+4. Conclude that if X is countable then for every probability distribution D over
+X there exists a function mD : (0,1) × (0,1) → N such that for every (cid:2), δ > 0 if
+m > mD((cid:2), δ) then
+
+[D({x : x /∈ S}) > (cid:2)] < δ.
+
+P
+
+S∼Dm
+
+5. Prove that Memorize is a consistent learner for every class of (binary-valued)
+
+functions over any countable domain.
+
+Downloaded from https://www.cambridge.org/core. UCL, Institute of Education, on 17 Jul 2018 at 16:06:35, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.008
+
+

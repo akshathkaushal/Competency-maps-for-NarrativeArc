@@ -1,0 +1,805 @@
+8
+
+The Runtime of Learning
+
+So far in the book we have studied the statistical perspective of learning, namely,
+how many samples are needed for learning. In other words, we focused on the
+amount of information learning requires. However, when considering automated
+learning, computational resources also play a major role in determining the com-
+plexity of a task: that is, how much computation is involved in carrying out a learning
+task. Once a sufﬁcient training sample is available to the learner, there is some com-
+putation to be done to extract a hypothesis or ﬁgure out the label of a given test
+instance. These computational resources are crucial in any practical application of
+machine learning. We refer to these two types of resources as the sample complex-
+ity and the computational complexity. In this chapter, we turn our attention to the
+computational complexity of learning.
+
+The computational complexity of learning should be viewed in the wider context
+of the computational complexity of general algorithmic tasks. This area has been
+extensively investigated; see, for example, (Sipser 2006). The introductory com-
+ments that follow summarize the basic ideas of that general theory that are most
+relevant to our discussion.
+
+The actual runtime (in seconds) of an algorithm depends on the speciﬁc machine
+the algorithm is being implemented on (e.g., what the clock rate of the machine’s
+CPU is). To avoid dependence on the speciﬁc machine, it is common to analyze
+the runtime of algorithms in an asymptotic sense. For example, we say that the
+computational complexity of the merge-sort algorithm, which sorts a list of n items,
+is O(n log (n)). This implies that we can implement the algorithm on any machine
+that satisﬁes the requirements of some accepted abstract model of computation,
+and the actual runtime in seconds will satisfy the following: there exist constants c
+and n0, which can depend on the actual machine, such that, for any value of n > n0,
+the runtime in seconds of sorting any n items will be at most c n log(n). It is common
+to use the term feasible or efﬁciently computable for tasks that can be performed
+by an algorithm whose running time is O( p(n)) for some polynomial function p.
+One should note that this type of analysis depends on deﬁning what is the input
+size n of any instance to which the algorithm is expected to be applied. For “purely
+algorithmic” tasks, as discussed in the common computational complexity literature,
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:42:50, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.009
+
+73
+
+74
+
+The Runtime of Learning
+
+this input size is clearly deﬁned; the algorithm gets an input instance, say, a list to
+be sorted, or an arithmetic operation to be calculated, which has a well deﬁned
+size (say, the number of bits in its representation). For machine learning tasks, the
+notion of an input size is not so clear. An algorithm aims to detect some pattern in
+a data set and can only access random samples of that data.
+
+We start the chapter by discussing this issue and deﬁne the computational
+complexity of learning. For advanced students, we also provide a detailed formal
+deﬁnition. We then move on to consider the computational complexity of imple-
+menting the ERM rule. We ﬁrst give several examples of hypothesis classes where
+the ERM rule can be efﬁciently implemented, and then consider some cases where,
+although the class is indeed efﬁciently learnable, ERM implementation is com-
+putationally hard. It follows that hardness of implementing ERM does not imply
+hardness of learning. Finally, we brieﬂy discuss how one can show hardness of a
+given learning task, namely, that no learning algorithm can solve it efﬁciently.
+
+8.1 COMPUTATIONAL COMPLEXITY OF LEARNING
+Recall that a learning algorithm has access to a domain of examples, Z, a hypothesis
+class, H, a loss function, (cid:9), and a training set of examples from Z that are sampled
+i.i.d. according to an unknown distribution D. Given parameters (cid:2), δ, the algorithm
+should output a hypothesis h such that with probability of at least 1− δ,
+
+LD(h) ≤ min
+
+h(cid:3)∈H LD(h
+
+(cid:3)
+
+)+ (cid:2).
+
+As mentioned before, the actual runtime of an algorithm in seconds depends
+on the speciﬁc machine. To allow machine independent analysis, we use the stan-
+dard approach in computational complexity theory. First, we rely on a notion of
+an abstract machine, such as a Turing machine (or a Turing machine over the reals
+[Blum, Shub & Smale 1989]). Second, we analyze the runtime in an asymptotic
+sense, while ignoring constant factors; thus the speciﬁc machine is not important as
+long as it implements the abstract machine. Usually, the asymptote is with respect
+to the size of the input to the algorithm. For example, for the merge-sort algorithm
+mentioned before, we analyze the runtime as a function of the number of items that
+need to be sorted.
+
+In the context of learning algorithms, there is no clear notion of “input size.” One
+might deﬁne the input size to be the size of the training set the algorithm receives,
+but that would be rather pointless. If we give the algorithm a very large number
+of examples, much larger than the sample complexity of the learning problem, the
+algorithm can simply ignore the extra examples. Therefore, a larger training set
+does not make the learning problem more difﬁcult, and, consequently, the runtime
+available for a learning algorithm should not increase as we increase the size of the
+training set. Just the same, we can still analyze the runtime as a function of natural
+parameters of the problem such as the target accuracy, the conﬁdence of achiev-
+ing that accuracy, the dimensionality of the domain set, or some measures of the
+complexity of the hypothesis class with which the algorithm’s output is compared.
+
+To illustrate this, consider a learning algorithm for the task of learning axis
+aligned rectangles. A speciﬁc problem of learning axis aligned rectangles is derived
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:42:50, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.009
+
+8.1 Computational Complexity of Learning
+
+75
+
+by specifying (cid:2), δ, and the dimension of the instance space. We can deﬁne a
+sequence of problems of the type “rectangles learning” by ﬁxing (cid:2), δ and varying the
+dimension to be d = 2,3,4, . . .. We can also deﬁne another sequence of “rectangles
+learning” problems by ﬁxing d, δ and varying the target accuracy to be (cid:2) = 1
+, . . ..
+One can of course choose other sequences of such problems. Once a sequence of the
+problems is ﬁxed, one can analyze the asymptotic runtime as a function of variables
+of that sequence.
+
+, 1
+3
+
+2
+
+Before we introduce the formal deﬁnition, there is one more subtlety we need to
+tackle. On the basis of the preceding, a learning algorithm can “cheat,” by transfer-
+ring the computational burden to the output hypothesis. For example, the algorithm
+can simply deﬁne the output hypothesis to be the function that stores the training set
+in its memory, and whenever it gets a test example x it calculates the ERM hypoth-
+esis on the training set and applies it on x. Note that in this case, our algorithm has a
+ﬁxed output (namely, the function that we have just described) and can run in con-
+stant time. However, learning is still hard – the hardness is now in implementing the
+output classiﬁer to obtain a label prediction. To prevent this “cheating,” we shall
+require that the output of a learning algorithm must be applied to predict the label
+of a new example in time that does not exceed the runtime of training (that is, com-
+puting the output classiﬁer from the input training sample). In the next subsection
+the advanced reader may ﬁnd a formal deﬁnition of the computational complexity
+of learning.
+
+8.1.1 Formal Deﬁnition*
+The deﬁnition that follows relies on a notion of an underlying abstract machine,
+which is usually either a Turing machine or a Turing machine over the reals. We
+will measure the computational complexity of an algorithm using the number of
+“operations” it needs to perform, where we assume that for any machine that imple-
+ments the underlying abstract machine there exists a constant c such that any such
+“operation” can be performed on the machine using c seconds.
+
+Deﬁnition 8.1 (The Computational Complexity of a Learning Algorithm). We
+deﬁne the complexity of learning in two steps. First we consider the computational
+complexity of a ﬁxed learning problem (determined by a triplet (Z ,H, (cid:9)) – a domain
+set, a benchmark hypothesis class, and a loss function). Then, in the second step we
+consider the rate of change of that complexity along a sequence of such tasks.
+
+1. Given a function f : (0,1)2 → N, a learning task (Z ,H, (cid:9)), and a learning
+algorithm, A, we say that A solves the learning task in time O( f ) if there
+exists some constant number c, such that for every probability distribution D
+over Z, and input (cid:2), δ ∈ (0,1), when A has access to samples generated i.i.d.
+by D,
+(cid:2) A terminates after performing at most c f ((cid:2), δ) operations
+(cid:2) The output of A, denoted hA, can be applied to predict the label of a new
+
+example while performing at most c f ((cid:2), δ) operations
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:42:50, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.009
+
+76
+
+The Runtime of Learning
+
+(cid:3)
+
+)+ (cid:2)
+
+(cid:2) The output of A is probably approximately correct; namely, with proba-
+bility of at least 1 − δ (over the random samples A receives), LD(hA) ≤
+minh(cid:3)∈H LD(h
+
+2. Consider a sequence of learning problems, (Zn,Hn, (cid:9)n)
+∞
+n=1, where problem
+n is deﬁned by a domain Zn, a hypothesis class Hn, and a loss function
+(cid:9)n. Let A be a learning algorithm designed for solving learning problems
+of this form. Given a function g : N × (0,1)2 → N, we say that the runtime
+of A with respect to the preceding sequence is O(g), if for all n, A solves
+the problem (Zn,Hn, (cid:9)n) in time O( fn), where fn : (0,1)2 → N is deﬁned by
+fn((cid:2), δ) = g(n, (cid:2), δ).
+
+We say that A is an efﬁcient algorithm with respect to a sequence (Zn,Hn, (cid:9)n) if
+
+its runtime is O( p(n,1/(cid:2),1/δ)) for some polynomial p.
+
+From this deﬁnition we see that the question whether a general learning prob-
+lem can be solved efﬁciently depends on how it can be broken into a sequence
+of speciﬁc learning problems. For example, consider the problem of learning a
+ﬁnite hypothesis class. As we showed in previous chapters, the ERM rule over
+H is guaranteed to ((cid:2), δ)-learn H if the number of training examples is order of
+mH((cid:2), δ) = log(|H|/δ)/(cid:2)2. Assuming that the evaluation of a hypothesis on an
+example takes a constant time, it is possible to implement the ERM rule in time
+O(|H| mH((cid:2), δ)) by performing an exhaustive search over H with a training set of
+size mH((cid:2), δ). For any ﬁxed ﬁnite H, the exhaustive search algorithm runs in poly-
+nomial time. Furthermore, if we deﬁne a sequence of problems in which |Hn| = n,
+then the exhaustive search is still considered to be efﬁcient. However, if we deﬁne a
+sequence of problems for which |Hn| = 2n, then the sample complexity is still poly-
+nomial in n but the computational complexity of the exhaustive search algorithm
+grows exponentially with n (thus, rendered inefﬁcient).
+
+8.2 IMPLEMENTING THE ERM RULE
+Given a hypothesis class H, the ERMH rule is maybe the most natural learning
+paradigm. Furthermore, for binary classiﬁcation problems we saw that if learning
+is at all possible, it is possible with the ERM rule. In this section we discuss the
+computational complexity of implementing the ERM rule for several hypothesis
+classes.
+Given a hypothesis class, H, a domain set Z, and a loss function (cid:9), the
+
+corresponding ERMH rule can be deﬁned as follows:
+On a ﬁnite input sample S ∈ Z m output some h ∈ H that minimizes the empirical
+loss, L S(h) = 1|S|
+
+(cid:2)
+
+(cid:9)(h, z).
+
+z∈S
+
+This section studies the runtime of implementing the ERM rule for several
+
+examples of learning tasks.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:42:50, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.009
+
+8.2 Implementing the ERM Rule
+
+77
+
+8.2.1 Finite Classes
+Limiting the hypothesis class to be a ﬁnite class may be considered as a reasonably
+mild restriction. For example, H can be the set of all predictors that can be imple-
+mented by a C++ program written in at most 10000 bits of code. Other examples
+of useful ﬁnite classes are any hypothesis class that can be parameterized by a ﬁnite
+number of parameters, where we are satisﬁed with a representation of each of the
+parameters using a ﬁnite number of bits, for example, the class of axis aligned rect-
+angles in the Euclidean space, Rd, when the parameters deﬁning any given rectangle
+are speciﬁed up to some limited precision.
+As we have shown in previous chapters, the sample complexity of learning a
+ﬁnite class is upper bounded by mH((cid:2), δ) = c log(c|H|/δ)/(cid:2)c, where c = 1 in the real-
+izable case and c = 2 in the nonrealizable case. Therefore, the sample complexity
+has a mild dependence on the size of H. In the example of C++ programs men-
+tioned before, the number of hypotheses is 210,000 but the sample complexity is only
+c(10,000+ log(c/δ))/(cid:2)c.
+A straightforward approach for implementing the ERM rule over a ﬁnite
+hypothesis class is to perform an exhaustive search. That is, for each h ∈ H we calcu-
+late the empirical risk, L S(h), and return a hypothesis that minimizes the empirical
+risk. Assuming that the evaluation of (cid:9)(h, z) on a single example takes a constant
+amount of time, k, the runtime of this exhaustive search becomes k|H|m, where
+m is the size of the training set. If we let m to be the upper bound on the sample
+complexity mentioned, then the runtime becomes k|H|c log(c|H|/δ)/(cid:2)c.
+The linear dependence of the runtime on the size of H makes this approach
+inefﬁcient (and unrealistic) for large classes. Formally, if we deﬁne a sequence
+n=1 such that log(|Hn|) = n, then the exhaustive search
+of problems (Zn,Hn , (cid:9)n)
+∞
+approach yields an exponential runtime. In the example of C++ programs, if Hn
+is the set of functions that can be implemented by a C++ program written in at
+most n bits of code, then the runtime grows exponentially with n, implying that the
+exhaustive search approach is unrealistic for practical use. In fact, this problem is
+one of the reasons we are dealing with other hypothesis classes, like classes of linear
+predictors, which we will encounter in the next chapter, and not just focusing on
+ﬁnite classes.
+
+It is important to realize that the inefﬁciency of one algorithmic approach (such
+as the exhaustive search) does not yet imply that no efﬁcient ERM implementation
+exists. Indeed, we will show examples in which the ERM rule can be implemented
+efﬁciently.
+
+8.2.2 Axis Aligned Rectangles
+Let Hn be the class of axis aligned rectangles in Rn, namely,
+Hn = {h(a1,...,an ,b1,...,bn) : ∀i ,ai ≤ bi}
+
+(cid:5)
+
+where
+
+h(a1,...,an ,b1,...,bn)(x, y) =
+
+1 if ∀i , xi ∈ [ai ,bi ]
+0 otherwise
+
+(8.1)
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:42:50, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.009
+
+78
+
+The Runtime of Learning
+
+Efﬁciently Learnable in the Realizable Case
+Consider implementing the ERM rule in the realizable case. That is, we are given
+a training set S = (x1, y1), . . . ,(xm , ym) of examples, such that there exists an axis
+aligned rectangle, h ∈Hn, for which h(xi )= yi for all i. Our goal is to ﬁnd such an axis
+aligned rectangle with a zero training error, namely, a rectangle that is consistent
+with all the labels in S.
+We show later that this can be done in time O(nm). Indeed, for each i ∈ [n],
+set ai = min{xi : (x,1) ∈ S} and bi = max{xi : (x,1) ∈ S}. In words, we take ai to be
+the minimal value of the i’th coordinate of a positive example in S and bi to be the
+maximal value of the i’th coordinate of a positive example in S. It is easy to verify
+that the resulting rectangle has zero training error and that the runtime of ﬁnding
+each ai and bi is O(m). Hence, the total runtime of this procedure is O(nm).
+
+Not Efﬁciently Learnable in the Agnostic Case
+In the agnostic case, we do not assume that some hypothesis h perfectly predicts
+the labels of all the examples in the training set. Our goal is therefore to ﬁnd h
+that minimizes the number of examples for which yi (cid:18)= h(xi ). It turns out that for
+many common hypothesis classes, including the classes of axis aligned rectangles we
+consider here, solving the ERM problem in the agnostic setting is NP-hard (and,
+in most cases, it is even NP-hard to ﬁnd some h ∈ H whose error is no more than
+some constant c > 1 times that of the empirical risk minimizer in H). That is, unless
+P = NP, there is no algorithm whose running time is polynomial in m and n that
+is guaranteed to ﬁnd an ERM hypothesis for these problems (Ben-David, Eiron &
+Long 2003).
+
+On the other hand, it is worthwhile noticing that, if we ﬁx one speciﬁc hypothesis
+class, say, axis aligned rectangles in some ﬁxed dimension, n, then there exist efﬁ-
+cient learning algorithms for this class. In other words, there are successful agnostic
+PAC learners that run in time polynomial in 1/(cid:2) and 1/δ (but their dependence on
+the dimension n is not polynomial).
+
+To see this, recall the implementation of the ERM rule we presented for the
+realizable case, from which it follows that an axis aligned rectangle is determined by
+at most 2n examples. Therefore, given a training set of size m, we can perform an
+exhaustive search over all subsets of the training set of size at most 2n examples and
+construct a rectangle from each such subset. Then, we can pick the rectangle with
+the minimal training error. This procedure is guaranteed to ﬁnd an ERM hypothe-
+sis, and the runtime of the procedure is m O(n). It follows that if n is ﬁxed, the runtime
+is polynomial in the sample size. This does not contradict the aforementioned hard-
+ness result, since there we argued that unless P=NP one cannot have an algorithm
+whose dependence on the dimension n is polynomial as well.
+
+8.2.3 Boolean Conjunctions
+A Boolean conjunction is a mapping from X = {0,1}n to Y = {0,1} that can be
+∧ . . .∧¬x jr , for
+expressed as a proposition formula of the form xi1
+some indices i1, . . . ,ik , j1, . . . , jr ∈ [n]. The function that such a proposition formula
+
+∧ . . .∧ xik
+
+∧ ¬x j1
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:42:50, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.009
+
+deﬁnes is
+
+(cid:5)
+
+h(x) =
+
+= ··· = xik
+
+1 if xi1
+0 otherwise
+
+8.2 Implementing the ERM Rule
+
+79
+
+= 1 and x j1
+
+= ··· = x jr
+
+= 0
+
+Let Hn
+
+C be the class of all Boolean conjunctions over {0,1}n. The size of Hn
+
+C is
+at most 3n + 1 (since in a conjunction formula, each element of x either appears,
+or appears with a negation sign, or does not appear at all, and we also have the all
+negative formula). Hence, the sample complexity of learning Hn
+C using the ERM
+rule is at most d log(3/δ)/(cid:2).
+
++
+
+Efﬁciently Learnable in the Realizable Case
+Next, we show that it is possible to solve the ERM problem for Hn
+C in time poly-
+nomial in n and m. The idea is to deﬁne an ERM conjunction by including in the
+hypothesis conjunction all the literals that do not contradict any positively labeled
+example. Let v1, . . . ,vm+ be all the positively labeled instances in the input sample S.
+We deﬁne, by induction on i ≤ m
+, a sequence of hypotheses (or conjunctions). Let
+h0 be the conjunction of all possible literals. That is, h0 = x1∧¬x1∧x2∧. . .∧xn∧¬xn.
+Note that h0 assigns the label 0 to all the elements of X . We obtain hi+1 by deleting
+from the conjunction hi all the literals that are not satisﬁed by vi+1. The algorithm
+outputs the hypothesis hm+. Note that hm+ labels positively all the positively labeled
+examples in S. Furthermore, for every i ≤ m
+, hi is the most restrictive conjunction
+that labels v1, . . . ,vi positively. Now, since we consider learning in the realizable
+setup, there exists a conjunction hypothesis, f ∈ Hn
+C , that is consistent with all the
+examples in S. Since hm+ is the most restrictive conjunction that labels positively all
+the positively labeled members of S, any instance labeled 0 by f is also labeled 0
+by hm+. It follows that hm+ has zero training error (w.r.t. S) and is therefore a legal
+ERM hypothesis. Note that the running time of this algorithm is O(mn).
+
++
+
+Not Efﬁciently Learnable in the Agnostic Case
+As in the case of axis aligned rectangles, unless P = NP, there is no algorithm whose
+running time is polynomial in m and n that guaranteed to ﬁnd an ERM hypothesis
+for the class of Boolean conjunctions in the unrealizable case.
+
+8.2.4 Learning 3-Term DNF
+We next show that a slight generalization of the class of Boolean conjunctions leads
+to intractability of solving the ERM problem even in the realizable case. Consider
+the class of 3-term disjunctive normal form formulae (3-term DNF). The instance
+space is X = {0,1}n and each hypothesis is represented by the Boolean formula of
+the form h(x)= A1(x)∨ A2(x)∨ A3(x), where each Ai(x) is a Boolean conjunction (as
+deﬁned in the previous section). The output of h(x) is 1 if either A1(x) or A2(x) or
+A3(x) outputs the label 1. If all three conjunctions output the label 0 then h(x) = 0.
+3DNF be the hypothesis class of all such 3-term DNF formulae. The size
+of Hn
+3DNF using the
+ERM rule is at most 3n log(3/δ)/(cid:2).
+
+Let Hn
+3DNF is at most 33n. Hence, the sample complexity of learning Hn
+However, from the computational perspective, this learning problem is hard.
+It has been shown (see (Pitt & Valiant 1988, Kearns, Schapire & Sellie 1994))
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:42:50, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.009
+
+80
+
+The Runtime of Learning
+that unless RP = NP, there is no polynomial time algorithm that properly learns
+a sequence of 3-term DNF learning problems in which the dimension of the n’th
+problem is n. By “properly” we mean that the algorithm should output a hypothesis
+that is a 3-term DNF formula. In particular, since ERMHn
+outputs a 3-term DNF
+formula it is a proper learner and therefore it is hard to implement it. The proof
+uses a reduction of the graph 3-coloring problem to the problem of PAC learning
+3-term DNF. The detailed technique is given in Exercise 8.4. See also (Kearns and
+Vazirani 1994, section 1.4).
+
+3DN F
+
+8.3 EFFICIENTLY LEARNABLE, BUT NOT BY A PROPER ERM
+In the previous section we saw that it is impossible to implement the ERM rule
+efﬁciently for the class Hn
+3DNF of 3-DNF formulae. In this section we show that it is
+possible to learn this class efﬁciently, but using ERM with respect to a larger class.
+
+Representation Independent Learning Is Not Hard
+Next we show that it is possible to learn 3-term DNF formulae efﬁciently. There is
+no contradiction to the hardness result mentioned in the previous section as we now
+allow “representation independent” learning. That is, we allow the learning algo-
+rithm to output a hypothesis that is not a 3-term DNF formula. The basic idea is to
+replace the original hypothesis class of 3-term DNF formula with a larger hypoth-
+esis class so that the new class is easily learnable. The learning algorithm might
+return a hypothesis that does not belong to the original hypothesis class; hence the
+name “representation independent” learning. We emphasize that in most situations,
+returning a hypothesis with good predictive ability is what we are really interested
+in doing.
+We start by noting that because ∨ distributes over ∧, each 3-term DNF formula
+
+can be rewritten as
+
+A1 ∨ A2 ∨ A3 =
+
+ 
+
+(u ∨ v ∨ w)
+
+u∈A1,v∈A2,w∈A3
+
+Next, let us deﬁne: ψ : {0,1}n → {0,1}(2n)3 such that for each triplet of literals u, v, w
+there is a variable in the range of ψ indicating if u∨ v∨ w is true or false. So, for each
+3-DNF formula over {0,1}n there is a conjunction over {0,1}(2n)3, with the same truth
+table. Since we assume that the data is realizable, we can solve the ERM problem
+with respect to the class of conjunctions over {0,1}(2n)3. Furthermore, the sample
+complexity of learning the class of conjunctions in the higher dimensional space
+is at most n3 log(1/δ)/(cid:2). Thus, the overall runtime of this approach is polynomial
+in n.
+
+Intuitively, the idea is as follows. We started with a hypothesis class for which
+learning is hard. We switched to another representation where the hypothesis class
+is larger than the original class but has more structure, which allows for a more
+efﬁcient ERM search. In the new representation, solving the ERM problem is easy.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:42:50, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.009
+
+8.4 Hardness of Learning
+
+81
+
+( 2 n ) 3
+
+{ 0 , 1 }
+
+ 
+
+ 
+
+  o v e r
+
+i o n s
+
+t
+
+C o n j u n c
+
+3-term-DNF formulae over {0,1}n
+
+8.4 HARDNESS OF LEARNING*
+We have just demonstrated that the computational hardness of implementing
+ERMH does not imply that such a class H is not learnable. How can we prove that
+a learning problem is computationally hard?
+
+One approach is to rely on cryptographic assumptions. In some sense, cryptog-
+raphy is the opposite of learning. In learning we try to uncover some rule underlying
+the examples we see, whereas in cryptography, the goal is to make sure that nobody
+will be able to discover some secret, in spite of having access to some partial infor-
+mation about it. On that high level intuitive sense, results about the cryptographic
+security of some system translate into results about the unlearnability of some corre-
+sponding task. Regrettably, currently one has no way of proving that a cryptographic
+protocol is not breakable. Even the common assumption of P (cid:18)= NP does not sufﬁce
+for that (although it can be shown to be necessary for most common cryptographic
+scenarios). The common approach for proving that cryptographic protocols are
+secure is to start with some cryptographic assumptions. The more these are used
+as a basis for cryptography, the stronger is our belief that they really hold (or, at
+least, that algorithms that will refute them are hard to come by).
+
+We now brieﬂy describe the basic idea of how to deduce hardness of learnability
+from cryptographic assumptions. Many cryptographic systems rely on the assump-
+tion that there exists a one way function. Roughly speaking, a one way function is
+a function f : {0,1}n → {0,1}n (more formally, it is a sequence of functions, one for
+each dimension n) that is easy to compute but is hard to invert. More formally,
+f
+can be computed in time poly(n) but for any randomized polynomial time algorithm
+A, and for every polynomial p(· ),
+
+P[ f (A( f (x))) = f (x)] < 1
+
+p(n)
+
+,
+
+where the probability is taken over a random choice of x according to the uniform
+distribution over {0,1}n and the randomness of A.
+
+A one way function, f , is called trapdoor one way function if, for some polyno-
+mial function p, for every n there exists a bit-string sn (called a secret key) of length
+≤ p(n), such that there is a polynomial time algorithm that, for every n and every
+x∈ {0,1}n, on input ( f (x),sn) outputs x. In other words, although f is hard to invert,
+once one has access to its secret key, inverting f becomes feasible. Such functions
+are parameterized by their secret key.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:42:50, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.009
+
+82
+
+The Runtime of Learning
+
+Now, let Fn be a family of trapdoor functions over {0,1}n that can be calculated
+by some polynomial time algorithm. That is, we ﬁx an algorithm that given a secret
+key (representing one function in Fn) and an input vector, it calculates the value
+of the function corresponding to the secret key on the input vector in polynomial
+=
+time. Consider the task of learning the class of the corresponding inverses, H n
+−1 : f ∈ Fn}. Since each function in this class can be inverted by some secret key
+{ f
+F
+sn of size polynomial in n, the class H n
+F can be parameterized by these keys and its
+size is at most 2 p(n). Its sample complexity is therefore polynomial in n. We claim
+that there can be no efﬁcient learner for this class. If there were such a learner, L,
+then by sampling uniformly at random a polynomial number of strings in {0,1}n,
+and computing f over them, we could generate a labeled training sample of pairs
+( f (x),x), which should sufﬁce for our learner to ﬁgure out an ((cid:2), δ) approximation
+−1 (w.r.t. the uniform distribution over the range of f ), which would violate the
+of f
+one way property of f .
+
+A more detailed treatment, as well as a concrete example, can be found in
+(Kearns and Vazirani 1994, chapter 6). Using reductions, they also show that the
+class of functions that can be calculated by small Boolean circuits is not efﬁciently
+learnable, even in the realizable case.
+
+8.5 SUMMARY
+The runtime of learning algorithms is asymptotically analyzed as a function of dif-
+ferent parameters of the learning problem, such as the size of the hypothesis class,
+our measure of accuracy, our measure of conﬁdence, or the size of the domain
+set. We have demonstrated cases in which the ERM rule can be implemented
+efﬁciently. For example, we derived efﬁcient algorithms for solving the ERM prob-
+lem for the class of Boolean conjunctions and the class of axis aligned rectangles,
+under the realizability assumption. However, implementing ERM for these classes
+in the agnostic case is NP-hard. Recall that from the statistical perspective, there
+is no difference between the realizable and agnostic cases (i.e., a class is learn-
+able in both cases if and only if it has a ﬁnite VC-dimension). In contrast, as we
+saw, from the computational perspective the difference is immense. We have also
+shown another example, the class of 3-term DNF, where implementing ERM is
+hard even in the realizable case, yet the class is efﬁciently learnable by another
+algorithm.
+
+Hardness of implementing the ERM rule for several natural hypothesis classes
+has motivated the development of alternative learning methods, which we will
+discuss in the next part of this book.
+
+8.6 BIBLIOGRAPHIC REMARKS
+Valiant (1984) introduced the efﬁcient PAC learning model in which the runtime of
+the algorithm is required to be polynomial in 1/(cid:2), 1/δ, and the representation size
+of hypotheses in the class. A detailed discussion and thorough bibliographic notes
+are given in Kearns and Vazirani (1994).
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:42:50, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.009
+
+8.7 Exercises
+
+83
+
+8.7 EXERCISES
+8.1 Let H be the class of intervals on the line (formally equivalent to axis aligned rect-
+angles in dimension n = 1). Propose an implementation of the ERMH learning rule
+(in the agnostic case) that given a training set of size m, runs in time O(m2).
+Hint: Use dynamic programming.
+
+8.2 Let H1,H2, . . . be a sequence of hypothesis classes for binary classiﬁcation. Assume
+that there is a learning algorithm that implements the ERM rule in the realizable
+case such that the output hypothesis of the algorithm for each class Hn only depends
+on O(n) examples out of the training set. Furthermore, assume that such a hypothe-
+sis can be calculated given these O(n) examples in time O(n), and that the empirical
+risk of each such hypothesis can be evaluated in time O(mn). For example, if Hn is
+the class of axis aligned rectangles in Rn, we saw that it is possible to ﬁnd an ERM
+hypothesis in the realizable case that is deﬁned by at most 2n examples. Prove that
+in such cases, it is possible to ﬁnd an ERM hypothesis for Hn in the unrealizable case
+in time O(mn m O(n)).
+
+8.3 In this exercise, we present several classes for which ﬁnding an ERM classiﬁer is
+computationally hard. First, we introduce the class of n-dimensional halfspaces,
+H Sn, for a domain X = Rn. This is the class of all functions of the form hw,b(x) =
+sign((cid:7)w,x(cid:8)+b) where w,x∈ Rn, (cid:7)w,x(cid:8) is their inner product, and b∈ R. See a detailed
+description in Chapter 9.
+1. Show that ERMH over the class H = H Sn of linear predictors is computationally
+hard. More precisely, we consider the sequence of problems in which the dimen-
+sion n grows linearly and the number of examples m is set to be some constant
+times n.
+Hint: You can prove the hardness by a reduction from the following problem:
+Max FS: Given a system of linear inequalities, Ax > b with A ∈ Rm×n and
+b∈ Rm (that is, a system of m linear inequalities in n variables, x= (x1, . . . , xn)),
+ﬁnd a subsystem containing as many inequalities as possible that has a
+solution (such a subsystem is called feasible).
+
+It has been shown (Sankaran 1993) that the problem Max FS is NP-hard.
+Show that any algorithm that ﬁnds an ERMH Sn hypothesis for any training sam-
+ple S ∈ (Rn × {+1,−1})m can be used to solve the Max FS problem of size m, n.
+Hint: Deﬁne a mapping that transforms linear inequalities in n variables into
+labeled points in Rn, and a mapping that transforms vectors in Rn to halfspaces,
+such that a vector w satisﬁes an inequality q if and only if the labeled point
+that corresponds to q is classiﬁed correctly by the halfspace corresponding to
+w. Conclude that the problem of empirical risk minimization for halfspaces in
+also NP-hard (that is, if it can be solved in time polynomial in the sample size,
+m, and the Euclidean dimension, n, then every problem in the class NP can be
+solved in polynomial time).
+
+k be the class of all intersections of k-many linear halfspaces
+in Rn. In this exercise, we wish to show that ERMHn
+is computationally hard for
+every k ≥ 3. Precisely, we consider a sequence of problems where k ≥ 3 is a
+constant and n grows linearly. The training set size, m, also grows linearly with n.
+Toward this goal, consider the k-coloring problem for graphs, deﬁned as
+follows:
+Given a graph G = (V , E), and a number k, determine whether there exists a
+function f : V → {1 . . .k} so that for every (u, v) ∈ E, f (u) (cid:18)= f (v).
+
+k
+
+2. Let X = Rn and let Hn
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:42:50, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.009
+
+84
+
+The Runtime of Learning
+
+Hint: Let h = !
+
+k-colorable.
+
+k
+
+The k-coloring problem is known to be NP-hard for every k ≥ 3 (Karp 1972).
+We wish to reduce the k-coloring problem to E RMHn
+: that is, to prove that if
+there is an algorithm that solves the E RMHn
+problem in time polynomial in k, n,
+and the sample size m, then there is a polynomial time algorithm for the graph
+k-coloring problem.
+Given a graph G = (V , E), let {v1 . . .vn} be the vertices in V . Construct a sample
+S(G) ∈ (Rn ×{±1})m, where m = |V|+|E|, as follows:
+(cid:2) For every vi ∈ V , construct an instance ei with a negative label.
+(cid:2) For every edge (vi , v j ) ∈ E, construct an instance (ei + e j )/2 with a positive
+1. Prove that if there exists some h ∈ Hn
+
+k that has zero error over S(G) then G is
+
+label.
+
+k
+
+k
+
+j=1 h j be an ERM classiﬁer in Hn
+
+k over S. Deﬁne a
+j such that h j(ei ) =
+coloring of V by setting f (vi ) to be the minimal
+−1. Use the fact that halfspaces are convex sets to show that it cannot
+be true that two vertices that are connected by an edge have the same
+color.
+
+2. Prove that if G is k-colorable then there exists some h ∈ H n
+
+k that has zero error
+
+over S(G).
+Hint: Given a coloring f of the vertices of G, we should come up
+with k hyperplanes, h1 . . .hk whose intersection is a perfect classiﬁer for
+S(G). Let b = 0. 6 for all of these hyperplanes and,
+for t ≤ k let the
+f (vi) = t and 0
+the t’th hyperplane, wt,i , be −1 if
+i’th weight of
+otherwise.
+
+3. On the basis of the preceding, prove that for any k ≥ 3, the ERMHn
+
+problem
+
+k
+
+is NP-hard.
+
+8.4 In this exercise we show that hardness of solving the ERM problem is equivalent to
+hardness of proper PAC learning. Recall that by “properness” of the algorithm we
+mean that it must output a hypothesis from the hypothesis class. To formalize this
+statement, we ﬁrst need the following deﬁnition.
+
+Deﬁnition 8.2. The complexity class Randomized Polynomial (RP) time is the class
+of all decision problems (that is, problems in which on any instance one has to ﬁnd
+out whether the answer is YES or NO) for which there exists a probabilistic algo-
+rithm (namely, the algorithm is allowed to ﬂip random coins while it is running) with
+these properties:
+(cid:2) On any input instance the algorithm runs in polynomial time in the input size.
+(cid:2) If the correct answer is NO, the algorithm must return NO.
+(cid:2) If the correct answer is YES, the algorithm returns YES with probability a ≥ 1/2
+
+and returns NO with probability 1− a.1
+
+Clearly the class RP contains the class P. It is also known that RP is contained in the
+class NP. It is not known whether any equality holds among these three complexity
+classes, but it is widely believed that NP is strictly larger than RP. In particular, it is
+believed that NP-hard problems cannot be solved by a randomized polynomial time
+algorithm.
+(cid:2) Show that if a class H is properly PAC learnable by a polynomial time algorithm,
+then the ERMH problem is in the class RP. In particular, this implies that when-
+ever the ERMH problem is NP-hard (for example, the class of intersections of
+
+1 The constant 1/2 in the deﬁnition can be replaced by any constant in (0,1).
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:42:50, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.009
+
+8.7 Exercises
+
+85
+
+halfspaces discussed in the previous exercise), then, unless NP = RP, there exists
+no polynomial time proper PAC learning algorithm for H.
+Hint: Assume you have an algorithm A that properly PAC learns a class H in
+time polynomial in some class parameter n as well as in 1/(cid:2) and 1/δ. Your
+goal is to use that algorithm as a subroutine to contract an algorithm B for
+solving the ERMH problem in random polynomial time. Given a training set,
+S ∈ (X × {±1}m), and some h ∈ H whose error on S is zero, apply the PAC
+learning algorithm to the uniform distribution over S and run it so that with
+probability ≥ 0. 3 it ﬁnds a function h ∈ H that has error less than (cid:2) = 1/|S| (with
+respect to that uniform distribution). Show that the algorithm just described
+satisﬁes the requirements for being a RP solver for ERMH.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:42:50, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.009
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:42:50, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.009
+
+

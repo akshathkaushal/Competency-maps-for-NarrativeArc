@@ -1,0 +1,1250 @@
+13
+
+Regularization and Stability
+
+In the previous chapter we introduced the families of convex-Lipschitz-bounded
+and convex-smooth-bounded learning problems. In this section we show that all
+learning problems in these two families are learnable. For some learning problems
+of this type it is possible to show that uniform convergence holds; hence they are
+learnable using the ERM rule. However, this is not true for all learning problems of
+this type. Yet, we will introduce another learning rule and will show that it learns all
+convex-Lipschitz-bounded and convex-smooth-bounded learning problems.
+
+The new learning paradigm we introduce in this chapter is called Regularized
+Loss Minimization, or RLM for short. In RLM we minimize the sum of the empirical
+risk and a regularization function. Intuitively, the regularization function measures
+the complexity of hypotheses. Indeed, one interpretation of the regularization func-
+tion is the structural risk minimization paradigm we discussed in Chapter 7. Another
+view of regularization is as a stabilizer of the learning algorithm. An algorithm is
+considered stable if a slight change of its input does not change its output much. We
+will formally deﬁne the notion of stability (what we mean by “slight change of input”
+and by “does not change much the output”) and prove its close relation to learnabil-
+ity. Finally, we will show that using the squared (cid:9)2 norm as a regularization function
+stabilizes all convex-Lipschitz or convex-smooth learning problems. Hence, RLM
+can be used as a general learning rule for these families of learning problems.
+
+13.1 REGULARIZED LOSS MINIMIZATION
+Regularized Loss Minimization (RLM) is a learning rule in which we jointly min-
+imize the empirical risk and a regularization function. Formally, a regularization
+function is a mapping R : Rd → R, and the regularized loss minimization rule outputs
+a hypothesis in
+
+(cid:3)
+
+(cid:4)
+L S(w)+ R(w)
+
+argmin
+
+w
+
+.
+
+(13.1)
+
+Regularized loss minimization shares similarities with minimum description length
+algorithms and structural risk minimization (see Chapter 7). Intuitively, the “com-
+plexity” of hypotheses is measured by the value of the regularization function, and
+
+137
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:48:36, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.014
+
+138
+
+Regularization and Stability
+
+the algorithm balances between low empirical risk and “simpler,” or “less complex,”
+hypotheses.
+
+There are many possible regularization functions one can use, reﬂecting some
+prior belief about the problem (similarly to the description language in Minimum
+Description Length). Throughout this section we will focus on one of the most sim-
+ple regularization functions: R(w) = λ(cid:9)w(cid:9)2, where λ > 0 is a scalar and the norm is
+the (cid:9)2 norm, (cid:9)w(cid:9) =
+
+i . This yields the learning rule:
+
+(cid:31)(cid:2)
+
+(cid:17)
+
+L S(w)+ λ(cid:9)w(cid:9)2
+
+.
+
+(13.2)
+
+(cid:16)
+
+w2
+
+d
+i=1
+A(S) = argmin
+
+w
+
+This type of regularization function is often called Tikhonov regularization.
+
+As mentioned before, one interpretation of Equation (13.2) is using structural
+risk minimization, where the norm of w is a measure of its “complexity.” Recall that
+in the previous chapter we introduced the notion of bounded hypothesis classes.
+Therefore, we can deﬁne a sequence of hypothesis classes, H1 ⊂ H2 ⊂ H3 . . ., where
+Hi = {w : (cid:9)w(cid:9)2 ≤ i}. If the sample complexity of each Hi depends on i then the RLM
+rule is similar to the SRM rule for this sequence of nested classes.
+
+A different interpretation of regularization is as a stabilizer. In the next section
+we deﬁne the notion of stability and prove that stable learning rules do not overﬁt.
+But ﬁrst, let us demonstrate the RLM rule for linear regression with the squared
+loss.
+
+13.1.1 Ridge Regression
+Applying the RLM rule with Tikhonov regularization to linear regression with the
+squared loss, we obtain the following learning rule:
+
+(cid:26)
+
+(cid:27)
+
+argmin
+w∈Rd
+
+λ(cid:9)w(cid:9)2
+
+2
+
++ 1
+m
+
+((cid:7)w,xi(cid:8)− yi)2
+
+1
+2
+
+.
+
+(13.3)
+
+m(cid:7)
+
+i=1
+
+Performing linear regression using Equation (13.3) is called ridge regression.
+
+To solve Equation (13.3) we compare the gradient of the objective to zero and
+
+obtain the set of linear equations
+
+(2λm I + A)w = b,
+
+(cid:26)
+
+m(cid:7)
+
+A =
+
+(cid:27)
+
+(cid:12)
+i
+
+and b = m(cid:7)
+
+where I is the identity matrix and A,b are as deﬁned in Equation (9.6), namely,
+
+xi x
+
+(13.4)
+Since A is a positive semideﬁnite matrix, the matrix 2λm I + A has all its eigenvalues
+bounded below by 2λm. Hence, this matrix is invertible and the solution to ridge
+regression becomes
+
+yixi .
+
+i=1
+
+i=1
+
+(13.5)
+In the next section we formally show how regularization stabilizes the algorithm
+and prevents overﬁtting. In particular, the analysis presented in the next sections
+(particularly, Corollary 13.11) will yield:
+
+w = (2λm I + A)
+
+−1 b.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:48:36, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.014
+
+139
+
+13.2 Stable Rules Do Not Overﬁt
+Theorem 13.1. Let D be a distribution over X ×[−1,1], where X ={x∈ Rd :(cid:9)x(cid:9)≤ 1}.
+Let H = {w ∈ Rd : (cid:9)w(cid:9) ≤ B}. For any (cid:2) ∈ (0,1), let m ≥ 150 B2/(cid:2)2. Then, applying the
+ridge regression algorithm with parameter λ = (cid:2)/(3B2) satisﬁes
+w∈H LD(w)+ (cid:2).
+
+S∼Dm [LD(A(S))] ≤ min
+
+E
+
+Remark 13.1. The preceding theorem tells us how many examples are needed to
+guarantee that the expected value of the risk of the learned predictor will be bounded
+by the approximation error of the class plus (cid:2). In the usual deﬁnition of agnostic
+PAC learning we require that the risk of the learned predictor will be bounded
+with probability of at least 1− δ. In Exercise 13.1 we show how an algorithm with a
+bounded expected risk can be used to construct an agnostic PAC learner.
+
+13.2 STABLE RULES DO NOT OVERFIT
+Intuitively, a learning algorithm is stable if a small change of the input to the algo-
+rithm does not change the output of the algorithm much. Of course, there are many
+ways to deﬁne what we mean by “a small change of the input” and what we mean
+by “does not change the output much”. In this section we deﬁne a speciﬁc notion of
+stability and prove that under this deﬁnition, stable rules do not overﬁt.
+Let A be a learning algorithm, let S = (z1, . . . , zm) be a training set of m examples,
+and let A(S) denote the output of A. The algorithm A suffers from overﬁtting if the
+difference between the true risk of its output, LD(A(S)), and the empirical risk of its
+output, L S(A(S)), is large. As mentioned in Remark 13.1, throughout this chapter
+we focus on the expectation (with respect to the choice of S) of this quantity, namely,
+ES [LD(A(S))− L S(A(S))].
+
+(cid:3)
+
+(cid:3)
+
+; namely, S(i) = (z1, . . . , zi−1, z
+
+We next deﬁne the notion of stability. Given the training set S and an additional
+, let S(i) be the training set obtained by replacing the i’th example of S
+example z
+(cid:3), zi+1, . . . , zm). In our deﬁnition of stability, “a
+with z
+small change of the input” means that we feed A with S(i) instead of with S. That is,
+we only replace one training example. We measure the effect of this small change
+of the input on the output of A, by comparing the loss of the hypothesis A(S) on
+zi to the loss of the hypothesis A(S(i)) on zi . Intuitively, a good learning algorithm
+will have (cid:9)(A(S(i)), zi )− (cid:9)(A(S), zi ) ≥ 0, since in the ﬁrst term the learning algorithm
+does not observe the example zi while in the second term zi is indeed observed. If
+the preceding difference is very large we suspect that the learning algorithm might
+overﬁt. This is because the learning algorithm drastically changes its prediction on
+zi if it observes it in the training set. This is formalized in the following theorem.
+Theorem 13.2. Let D be a distribution. Let S = (z1, . . . , zm) be an i.i.d. sequence of
+be another i.i.d. example. Let U(m) be the uniform distribution
+examples and let z
+over [m]. Then, for any learning algorithm,
+
+(cid:3)
+
+[LD(A(S))− L S(A(S))]=
+
+E
+S∼Dm
+
+E
+
+(S,z(cid:3))∼Dm+1,i∼U(m)
+
+[(cid:9)(A(S(i), zi ))−(cid:9)(A(S), zi )]. (13.6)
+
+Proof. Since S and z
+
+(cid:3)
+
+are both drawn i.i.d. from D, we have that for every i,
+
+[LD(A(S))] = E
+
+S,z(cid:3) [(cid:9)(A(S), z
+
+(cid:3)
+
+)] = E
+
+S,z(cid:3) [(cid:9)(A(S(i)), zi )].
+
+E
+S
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:48:36, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.014
+
+140
+
+Regularization and Stability
+
+On the other hand, we can write
+
+[L S(A(S))] = E
+
+S,i
+
+E
+S
+
+[(cid:9)(A(S), zi )].
+
+Combining the two equations we conclude our proof.
+
+When the right-hand side of Equation (13.6) is small, we say that A is a sta-
+ble algorithm – changing a single example in the training set does not lead to a
+signiﬁcant change. Formally,
+Deﬁnition 13.3 (On-Average-Replace-One-Stable). Let (cid:2) : N → R be a monotoni-
+cally decreasing function. We say that a learning algorithm A is on-average-replace-
+one-stable with rate (cid:2)(m) if for every distribution D
+
+E
+
+(S,z(cid:3))∼Dm+1,i∼U(m)
+
+[(cid:9)(A(S(i), zi ))− (cid:9)(A(S), zi )] ≤ (cid:2)(m).
+
+Theorem 13.2 tells us that a learning algorithm does not overﬁt if and only if
+it is on-average-replace-one-stable. Of course, a learning algorithm that does not
+overﬁt is not necessarily a good learning algorithm – take, for example, an algo-
+rithm A that always outputs the same hypothesis. A useful algorithm should ﬁnd
+a hypothesis that on one hand ﬁts the training set (i.e., has a low empirical risk)
+and on the other hand does not overﬁt. Or, in light of Theorem 13.2, the algorithm
+should both ﬁt the training set and at the same time be stable. As we shall see, the
+parameter λ of the RLM rule balances between ﬁtting the training set and being
+stable.
+
+13.3 TIKHONOV REGULARIZATION AS A STABILIZER
+In the previous section we saw that stable rules do not overﬁt. In this section we
+show that applying the RLM rule with Tikhonov regularization, λ(cid:9)w(cid:9)2, leads to a
+stable algorithm. We will assume that the loss function is convex and that it is either
+Lipschitz or smooth.
+
+The main property of the Tikhonov regularization that we rely on is that it makes
+
+the objective of RLM strongly convex, as deﬁned in the following.
+
+Deﬁnition 13.4 (Strongly Convex Functions). A function f is λ-strongly convex if
+for all w, u, and α ∈ (0, 1) we have
+
+f (αw+ (1− α)u) ≤ α f (w)+ (1− α) f (u)− λ
+2
+
+α(1− α)(cid:9)w− u(cid:9)2.
+
+Clearly, every convex function is 0-strongly convex. An illustration of strong
+
+convexity is given in the following ﬁgure.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:48:36, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.014
+
+13.3 Tikhonov Regularization as a Stabilizer
+
+141
+
+f (u)
+
+f (w)
+
+≥ α (1 − α) || u − w ||2
+
+λ
+2
+
+w
+α w + (1−α) u
+
+u
+
+The following lemma implies that the objective of RLM is (2λ)-strongly convex.
+
+In addition, it underscores an important property of strong convexity.
+
+Lemma 13.5.
+
+1. The function f (w) = λ(cid:9)w(cid:9)2 is 2λ-strongly convex.
+2. If f is λ-strongly convex and g is convex, then f + g is λ-strongly convex.
+3. If f is λ-strongly convex and u is a minimizer of f , then, for any w,
+
+f (w)− f (u) ≥ λ
+2
+
+(cid:9)w− u(cid:9)2.
+
+Proof. The ﬁrst two points follow directly from the deﬁnition. To prove the last
+point, we divide the deﬁnition of strong convexity by α and rearrange terms to get
+that
+
+f (u+ α(w− u))− f (u)
+
+α
+
+≤ f (w)− f (u)− λ
+2
+
+(1− α)(cid:9)w− u(cid:9)2.
+
+λ
+2
+
+Taking the limit α → 0 we obtain that the right-hand side converges to f (w)− f (u)−
+(cid:9)w − u(cid:9)2. On the other hand, the left-hand side becomes the derivative of the
+function g(α) = f (u+ α(w− u)) at α = 0. Since u is a minimizer of f , it follows that
+α = 0 is a minimizer of g, and therefore the left-hand side of the preceding goes to
+zero in the limit α → 0, which concludes our proof.
+
+We now turn to prove that RLM is stable. Let S = (z1, . . . , zm) be a training set,
+be an additional example, and let S(i) = (z1, . . . , zi−1, z
+(cid:3)
+(cid:3), zi+1, . . . , zm). Let A be
+(cid:17)
+
+let z
+the RLM rule, namely,
+
+(cid:16)
+
+A(S) = argmin
+
+L S(w)+ λ(cid:9)w(cid:9)2
+
+.
+
+w
+
+Denote fS(w) = L S(w)+ λ(cid:9)w(cid:9)2, and on the basis of Lemma 13.5 we know that fS is
+(2λ)-strongly convex. Relying on part 3 of the lemma, it follows that for any v,
+
+fS(v)− fS(A(S)) ≥ λ(cid:9)v− A(S)(cid:9)2.
+
+(13.7)
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:48:36, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.014
+
+142
+
+Regularization and Stability
+
+On the other hand, for any v and u, and for all i, we have
+
+fS(v)− f S(u) = L S(v)+ λ(cid:9)v(cid:9)2 − (L S(u)+ λ(cid:9)u(cid:9)2)
+
+= L S(i)(v)+ λ(cid:9)v(cid:9)2 − (L S(i)(u)+ λ(cid:9)u(cid:9)2)
+)− (cid:9)(v, z
++ (cid:9)(v, zi )− (cid:9)(u, zi )
+m
+
++ (cid:9)(u, z
+
+m
+
+(cid:3)
+
+(13.8)
+
+(cid:3)
+
+)
+
+.
+
+In particular, choosing v = A(S(i)), u = A(S), and using the fact that v minimizes
+L S(i)(w)+ λ(cid:9)w(cid:9)2, we obtain that
+fS(A(S(i)))− fS(A(S)) ≤ (cid:9)(A(S(i)), zi )− (cid:9)(A(S), zi )
+
+)− (cid:9)(A(S(i)), z
+
++ (cid:9)(A(S), z
+
+)
+
+(cid:3)
+
+(cid:3)
+
+m
+
+m
+
+.
+(13.9)
+
+Combining this with Equation (13.7) we obtain that
+
+λ(cid:9)A(S(i))− A(S)(cid:9)2 ≤ (cid:9)(A(S(i)), zi )− (cid:9)(A(S), zi )
+
+m
+
+(cid:3)
+
++ (cid:9)(A(S), z
+
+)− (cid:9)(A(S(i)), z
+m
+
+(cid:3)
+
+)
+
+.
+
+(13.10)
+
+The two subsections that follow continue the stability analysis for either Lip-
+schitz or smooth loss functions. For both families of loss functions we show that
+RLM is stable and therefore it does not overﬁt.
+
+13.3.1 Lipschitz Loss
+If the loss function, (cid:9)(·, zi ), is ρ-Lipschitz, then by the deﬁnition of Lipschitzness,
+
+(cid:9)(A(S(i)), zi )− (cid:9)(A(S), zi ) ≤ ρ(cid:9)A(S(i))− A(S)(cid:9).
+
+(13.11)
+
+Similarly,
+
+(cid:9)(A(S), z
+
+(cid:3)
+
+)− (cid:9)(A(S(i)), z
+
+(cid:3)
+
+) ≤ ρ (cid:9)A(S(i))− A(S)(cid:9).
+
+Plugging these inequalities into Equation (13.10) we obtain
+
+λ(cid:9)A(S(i))− A(S)(cid:9)2 ≤ 2 ρ(cid:9)A(S(i))− A(S)(cid:9)
+
+m
+
+,
+
+which yields
+
+(cid:9)A(S(i))− A(S)(cid:9) ≤ 2 ρ
+λm
+
+.
+
+Plugging the preceding back into Equation (13.11) we conclude that
+
+Since this holds for any S, z
+
+(cid:9)(A(S(i)), zi )− (cid:9)(A(S), zi ) ≤ 2 ρ2
+λm
+(cid:3), i we immediately obtain:
+
+.
+
+Corollary 13.6. Assume that the loss function is convex and ρ-Lipschitz. Then, the
+RLM rule with the regularizer λ(cid:9)w(cid:9)2 is on-average-replace-one-stable with rate 2 ρ2
+λ m .
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:48:36, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.014
+
+13.3 Tikhonov Regularization as a Stabilizer
+
+143
+
+It follows (using Theorem 13.2) that
+
+[LD(A(S))− L S(A(S))] ≤ 2 ρ2
+λm
+
+.
+
+E
+S∼Dm
+
+13.3.2 Smooth and Nonnegative Loss
+If
+Section 12.1):
+
+the loss is β-smooth and nonnegative then it
+
+is also self-bounded (see
+
+We further assume that λ≥ 2β
+assumption we have that
+
+(cid:9)∇ f (w)(cid:9)2 ≤ 2β f (w).
+
+(13.12)
+m , or, in other words, that β ≤ λm/2. By the smoothness
+
+(cid:9)(A(S(i)), zi )− (cid:9)(A(S), zi ) ≤ (cid:7)∇(cid:9)(A(S), zi ), A(S(i))− A(S)(cid:8)+ β
+2
+
+(cid:9)A(S(i))− A(S)(cid:9)2.
+(13.13)
+
+Using the Cauchy-Schwartz inequality and Equation (12.6) we further obtain that
+
+(cid:9)(A(S(i)), zi )− (cid:9)(A(S), zi )
+
+≤ (cid:9)∇(cid:9)(A(S), zi )(cid:9)(cid:9)A(S(i))− A(S)(cid:9)+ β
+(cid:22)
+2
+≤
+2β(cid:9)(A(S), zi )(cid:9)A(S(i))− A(S)(cid:9)+ β
+2
+
+(cid:9)A(S(i))− A(S)(cid:9)2
+(cid:9)A(S(i))− A(S)(cid:9)2.
+
+(13.14)
+
+By a symmetric argument it holds that
+
+(cid:3)
+
+(cid:9)(A(S), z
+
+(cid:3)
+
+)
+
+(cid:31)
+)− (cid:9)(A(S(i)), z
+≤
+2β(cid:9)(A(S(i)), z(cid:3))(cid:9)A(S(i))− A(S)(cid:9)+ β
+2
+
+(cid:9)A(S(i))− A(S)(cid:9)2.
+
+Plugging these inequalities into Equation (13.10) and rearranging terms we obtain
+that
+
+(cid:9)A(S(i))− A(S)(cid:9) ≤
+
+(cid:9)A(S(i))− A(S)(cid:9) ≤
+
+(cid:20)(cid:22)
+(cid:9)(A(S), zi )+
+
+√
+2β
+(λm − β)
+(cid:20)(cid:22)
+(cid:9)(A(S), zi )+
+
+√
+8β
+λm
+
+(cid:21)
+(cid:31)
+(cid:9)(A(S(i)), z(cid:3))
+
+.
+
+(cid:31)
+(cid:9)(A(S(i)), z(cid:3))
+
+(cid:21)
+
+.
+
+Combining the preceding with the assumption β ≤ λm/2 yields
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:48:36, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.014
+
+144
+
+Regularization and Stability
+
+Combining the preceding with Equation (13.14) and again using the assumption
+β ≤ λm/2 yield
+
+≤
+
+≤
+
+(cid:9)(A(S(i)), zi )− (cid:9)(A(S), zi )
+(cid:27)(cid:20)(cid:22)
+
+(cid:22)
+(cid:26)
+(cid:9)A(S(i))− A(S)(cid:9)2
+2β(cid:9)(A(S), zi )(cid:9)A(S(i))− A(S)(cid:9)+ β
+(cid:21)2
+(cid:31)
+2
++ 8β2
+(cid:9)(A(S(i)), z(cid:3))
+(cid:21)2
+(cid:20)(cid:22)
+(λm)2
+(cid:9)(A(S), zi )+
+(cid:16)
+(cid:9)(A(S), zi )+ (cid:9)(A(S(i)), z
+
+(cid:9)(A(S), zi )+
+(cid:31)
+(cid:9)(A(S(i)), z(cid:3))
+(cid:17)
+
+4β
+λm
+
+)
+
+,
+
+(cid:3)
+
+≤ 8β
+λm
+≤ 24β
+λm
+
+where in the last step we used the inequality (a + b)2 ≤ 3(a2 + b2). Taking expec-
+)] =
+tation with respect to S, z
+E[L S(A(S))], we conclude that:
+
+(cid:3), i and noting that E[(cid:9)(A(S), zi )] = E[(cid:9)(A(S(i)), z
+
+(cid:3)
+
+Corollary 13.7. Assume that the loss function is β-smooth and nonnegative. Then, the
+RLM rule with the regularizer λ(cid:9)w(cid:9)2, where λ ≥ 2β
+
+(cid:11)
+(cid:12)
+(cid:9)(A(S(i)), zi )− (cid:9)(A(S), zi )
+
+E
+
+m , satisﬁes
+≤ 48β
+λm
+
+E[L S(A(S))].
+
+Note that if for all z we have (cid:9)(0, z) ≤ C, for some scalar C > 0, then for every S,
+
+L S(A(S)) ≤ L S(A(S))+ λ(cid:9)A(S)(cid:9)2 ≤ L S(0)+ λ(cid:9)0(cid:9)2 = L S(0) ≤ C.
+
+Hence, Corollary 13.7 also implies that
+
+(cid:12)
+(cid:11)
+(cid:9)(A(S(i)), zi )− (cid:9)(A(S), zi )
+
+E
+
+≤ 48 β C
+λm
+
+.
+
+13.4 CONTROLLING THE FITTING-STABILITY TRADE-OFF
+We can rewrite the expected risk of a learning algorithm as
+
+[LD(A(S))] = E
+
+S
+
+[L S(A(S))]+ E
+
+S
+
+E
+S
+
+[LD(A(S))− L S(A(S))].
+
+(13.15)
+
+The ﬁrst term reﬂects how well A(S) ﬁts the training set while the second term
+reﬂects the difference between the true and empirical risks of A(S). As we have
+shown in Theorem 13.2, the second term is equivalent to the stability of A. Since
+our goal is to minimize the risk of the algorithm, we need that the sum of both terms
+will be small.
+
+In the previous section we have bounded the stability term. We have shown
+that the stability term decreases as the regularization parameter, λ, increases. On
+the other hand, the empirical risk increases with λ. We therefore face a tradeoff
+between ﬁtting and overﬁtting. This tradeoff is quite similar to the bias-complexity
+tradeoff we discussed previously in the book.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:48:36, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.014
+
+13.4 Controlling the Fitting-Stability Trade-off
+
+145
+
+(cid:3)
+
+(cid:4)
+
+We now derive bounds on the empirical risk term for the RLM rule. Recall that
+. Fix some arbitrary
+
+the RLM rule is deﬁned as A(S) = argminw
+vector w
+
+L S(w)+ λ(cid:9)w(cid:9)2
+
+. We have
+
+∗
+
+L S(A(S)) ≤ L S(A(S))+ λ(cid:9)A(S)(cid:9)2 ≤ L S(w
+
+∗
+
+)+ λ(cid:9)w
+
+∗(cid:9)2.
+
+Taking expectation of both sides with respect to S and noting that ES [L S(w
+LD(w∗
+
+), we obtain that
+
+∗
+
+)] =
+
+[L S(A(S))] ≤ LD(w
+
+∗
+
+)+ λ(cid:9)w
+
+∗(cid:9)2.
+
+E
+S
+
+(13.16)
+
+Plugging this into Equation (13.15) we obtain
+
+[LD(A(S))] ≤ LD(w
+
+∗
+
+)+ λ(cid:9)w
+
+∗(cid:9)2 + E
+
+S
+
+[LD(A(S))− L S(A(S))].
+
+E
+S
+
+Combining the preceding with Corollary 13.6 we conclude:
+
+S
+
+Corollary 13.8. Assume that the loss function is convex and ρ-Lipschitz. Then, the
+RLM rule with the regularization function λ(cid:9)w(cid:9)2 satisﬁes
+)+ λ(cid:9)w
+
+[LD(A(S))] ≤ LD(w
+
+∗, E
+
+∀w
+
+∗
+
+.
+
+∗(cid:9)2 + 2ρ2
+λm
+
+This bound is often called an oracle inequality – if we think of w∗
+
+as a hypothesis
+with low risk, the bound tells us how many examples are needed so that A(S) will
+be almost as good as w∗
+. In practice, however, we
+usually do not know the norm of w
+. We therefore usually tune λ on the basis of a
+validation set, as described in Chapter 11.
+
+, had we known the norm of w∗
+
+∗
+
+We can also easily derive a PAC-like guarantee1 from Corollary 13.8 for convex-
+
+Lipschitz-bounded learning problems:
+Corollary 13.9. Let (H, Z , (cid:9)) be a convex-Lipschitz-bounded learning problem with
+parameters ρ, B. For any training set size m, let λ =
+2ρ2
+B2 m . Then, the RLM rule with
+the regularization function λ(cid:9)w(cid:9)2 satisﬁes
+[LD(A(S))] ≤ min
+
+(cid:31)
+
+(cid:23)
+
+.
+
+E
+S
+
+w∈H LD(w)+ ρ B
+if m ≥ 8ρ2 B2
+
+(cid:2)2
+
+8
+m
+
+then for every distribution D,
+
+for every (cid:2) > 0,
+In particular,
+ES [LD(A(S))] ≤ minw∈H LD(w)+ (cid:2).
+
+The preceding corollary holds for Lipschitz loss functions. If instead the loss
+function is smooth and nonnegative, then we can combine Equation (13.16) with
+Corollary 13.7 to get:
+
+Corollary 13.10. Assume that the loss function is convex, β-smooth, and nonnegative.
+Then, the RLM rule with the regularization function λ(cid:9)w(cid:9)2, for λ ≥ 2β
+m , satisﬁes the
+
+1 Again, the bound below is on the expected risk, but using Exercise 13.1 it can be used to derive an
+
+agnostic PAC learning guarantee.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:48:36, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.014
+
+146
+
+Regularization and Stability
+
+following for all w∗
+:
+[LD(A(S))] ≤
+
+E
+S
+
+(cid:20)
+1+ 48β
+λm
+
+(cid:21)
+
+(cid:21)(cid:16)
+
+(cid:20)
+1+ 48β
+λm
+
+(cid:17)
+
+.
+
+LD(w
+
+∗
+
+)+ λ(cid:9)w
+
+∗(cid:9)2
+
+[L S(A(S))] ≤
+
+E
+S
+
+if we choose λ = 48β
+
+For example,
+
+m we obtain from the preceding that the
+expected true risk of A(S) is at most twice the expected empirical risk of A(S).
+Furthermore, for this value of λ, the expected empirical risk of A(S) is at most
+LD(w
+
+)+ 48β
+
+∗(cid:9)2.
+
+(cid:9)w
+
+∗
+
+We can also derive a learnability guarantee for convex-smooth-bounded learn-
+
+m
+
+ing problems based on Corollary 13.10.
+Corollary 13.11. Let (H, Z , (cid:9)) be a convex-smooth-bounded learning problem with
+parameters β, B. Assume in addition that (cid:9)(0, z) ≤ 1 for all z ∈ Z. For any (cid:2) ∈ (0,1)
+let m ≥ 150β B2
+
+and set λ = (cid:2)/(3B2). Then, for every distribution D,
+
+(cid:2)2
+
+[LD(A(S))] ≤ min
+
+w∈H LD(w)+ (cid:2).
+
+E
+S
+
+13.5 SUMMARY
+We introduced stability and showed that if an algorithm is stable then it does not
+overﬁt. Furthermore, for convex-Lipschitz-bounded or convex-smooth-bounded
+problems, the RLM rule with Tikhonov regularization leads to a stable learn-
+ing algorithm. We discussed how the regularization parameter, λ, controls the
+tradeoff between ﬁtting and overﬁtting. Finally, we have shown that all learning
+problems that are from the families of convex-Lipschitz-bounded and convex-
+smooth-bounded problems are learnable using the RLM rule. The RLM paradigm
+is the basis for many popular learning algorithms, including ridge regression (which
+we discussed in this chapter) and support vector machines (which will be discussed
+in Chapter 15).
+
+In the next chapter we will present Stochastic Gradient Descent, which gives
+us a very practical alternative way to learn convex-Lipschitz-bounded and convex-
+smooth-bounded problems and can also be used for efﬁciently implementing the
+RLM rule.
+
+13.6 BIBLIOGRAPHIC REMARKS
+Stability is widely used in many mathematical contexts. For example, the necessity
+of stability for so-called inverse problems to be well posed was ﬁrst recognized by
+Hadamard (1902). The idea of regularization and its relation to stability became
+widely known through the works of Tikhonov (1943) and Phillips (1962). In the
+context of modern learning theory, the use of stability can be traced back at least to
+the work of Rogers and Wager (1978), which noted that the sensitivity of a learning
+algorithm with regard to small changes in the sample controls the variance of the
+leave-one-out estimate. The authors used this observation to obtain generalization
+bounds for the k-nearest neighbor algorithm (see Chapter 19). These results were
+later extended to other “local” learning algorithms (see Devroye, Györﬁ & Lugosi
+(1996) and references therein). In addition, practical methods have been developed
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:48:36, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.014
+
+13.7 Exercises
+
+147
+
+to introduce stability into learning algorithms, in particular the Bagging technique
+introduced by (Breiman 1996).
+
+Over the last decade, stability was studied as a generic condition for learnability.
+See (Kearns & Ron 1999, Bousquet & Elisseeff 2002, Kutin & Niyogi 2002, Rakhlin,
+Mukherjee & Poggio 2005, Mukherjee, Niyogi, Poggio & Rifkin 2006). Our presen-
+tation follows the work of Shalev-Shwartz, Shamir, Srebro, and Sridharan (2010),
+who showed that stability is sufﬁcient and necessary for learning. They have also
+shown that all convex-Lipschitz-bounded learning problems are learnable using
+RLM, even though for some convex-Lipschitz-bounded learning problems uniform
+convergence does not hold in a strong sense.
+
+13.7 EXERCISES
+13.1 From Bounded Expected Risk to Agnostic PAC Learning: Let A be an algorithm
+that guarantees the following: If m ≥ mH((cid:2)) then for every distribution D it holds
+that
+
+[LD(A(S))]≤ min
+
+h∈H LD(h)+ (cid:2).
+
+E
+S∼Dm
+
+(cid:2) Show that for every δ ∈ (0,1), if m ≥ mH((cid:2) δ) then with probability of at least
+1− δ it holds that LD(A(S))≤ minh∈H LD(h)+ (cid:2).
+Hint: Observe that the random variable LD(A(S))− minh∈H LD(h) is nonneg-
+ative and rely on Markov’s inequality.
+
+(cid:2) For every δ ∈ (0,1) let
+
+mH((cid:2), δ) = mH((cid:2)/2)(cid:24)log2 (1/δ)(cid:25)+
+
+log(4/δ)+ log((cid:24)log2 (1/δ)(cid:25))
+
+(cid:2)2
+
+(cid:10)
+
+.
+
+(cid:9)
+
+Suggest a procedure that agnostic PAC learns the problem with sample com-
+plexity of mH((cid:2), δ), assuming that the loss function is bounded by 1.
+Hint: Let k = (cid:24)log2 (1/δ)(cid:25). Divide the data into k + 1 chunks, where each of the
+ﬁrst k chunks is of size mH((cid:2)/2) examples. Train the ﬁrst k chunks using A. On
+the basis of the previous question argue that the probability that for all of these
+−k ≤ δ/2. Finally, use
+chunks we have LD(A(S)) > minh∈H LD(h)+ (cid:2) is at most 2
+the last chunk as a validation set.
+13.2 Learnability without Uniform Convergence: Let B be the unit ball of Rd, let H = B,
+
+let Z = B×{0,1}d , and let (cid:9) : Z ×H → R be deﬁned as follows:
+
+(cid:9)(w,(x, α)) = d(cid:7)
+
+i=1
+
+αi(xi − wi)2.
+
+This problem corresponds to an unsupervised learning task, meaning that we do
+not try to predict the label of x. Instead, what we try to do is to ﬁnd the “center of
+mass” of the distribution over B. However, there is a twist, modeled by the vectors
+α. Each example is a pair (x, α), where x is the instance x and α indicates which
+features of x are “active” and which are “turned off.” A hypothesis is a vector
+w representing the center of mass of the distribution, and the loss function is the
+squared Euclidean distance between x and w, but only with respect to the “active”
+elements of x.
+(cid:2) Show that this problem is learnable using the RLM rule with a sample
+
+complexity that does not depend on d.
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:48:36, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.014
+
+148
+
+Regularization and Stability
+
+(cid:2) Consider a distribution D over Z as follows: x is ﬁxed to be some x0, and each
+element of α is sampled to be either 1 or 0 with equal probability. Show that
+the rate of uniform convergence of this problem grows with d.
+Hint: Let m be a training set size. Show that if d & 2m, then there is a high
+probability of sampling a set of examples such that there exists some j ∈ [d] for
+which α j = 1 for all the examples in the training set. Show that such a sample
+cannot be (cid:2)-representative. Conclude that the sample complexity of uniform
+convergence must grow with log(d).
+(cid:2) Conclude that if we take d to inﬁnity we obtain a problem that is learnable but
+for which the uniform convergence property does not hold. Compare to the
+fundamental theorem of statistical learning.
+
+13.3 Stability and Asymptotic ERM Are Sufﬁcient for Learnability:
+
+We say that a learning rule A is an AERM (Asymptotic Empirical Risk Minimizer)
+(cid:25)
+with rate (cid:2)(m) if for every distribution D it holds that
+
+(cid:24)
+
+E
+S∼Dm
+
+L S(A(S))− min
+
+h∈H L S(h)
+
+We say that a learning rule A learns a class H with rate (cid:2)(m) if for every distribution
+D it holds that
+
+(cid:24)
+
+E
+S∼Dm
+
+Prove the following:
+
+LD(A(S))− min
+
+h∈H LD(h)
+
+≤ (cid:2)(m).
+(cid:25)
+
+≤ (cid:2)(m).
+
+Theorem 13.12. If a learning algorithm A is on-average-replace-one-stable with rate
+(cid:2)1(m) and is an AERM with rate (cid:2)2(m), then it learns H with rate (cid:2)1(m)+ (cid:2)2(m).
+
+13.4 Strong Convexity with Respect to General Norms:
+
+Throughout the section we used the (cid:9)2 norm. In this exercise we generalize some
+of the results to general norms. Let (cid:9) · (cid:9) be some arbitrary norm, and let f be a
+strongly convex function with respect to this norm (see Deﬁnition 13.4).
+1. Show that items 2–3 of Lemma 13.5 hold for every norm.
+2. (*) Give an example of a norm for which item 1 of Lemma 13.5 does not hold.
+3. Let R(w) be a function that is (2λ)-strongly convex with respect to some norm
+
+(cid:9)·(cid:9). Let A be an RLM rule with respect to R, namely,
+L S(w)+ R(w)
+
+A(S) = argmin
+
+(cid:3)
+
+(cid:4)
+
+.
+
+w
+
+Assume that for every z, the loss function (cid:9)(·, z) is ρ-Lipschitz with respect to
+the same norm, namely,
+
+∀z, ∀w, v, (cid:9)(w, z)− (cid:9)(v, z) ≤ ρ (cid:9)w− v(cid:9).
+
+Prove that A is on-average-replace-one-stable with rate 2ρ2
+λm .
+
+4. (*) Let q ∈ (1, 2) and consider the (cid:9)q-norm
+d(cid:7)
+
+(cid:26)
+
+(cid:27)1/q
+
+(cid:9)w(cid:9)q =
+
+|wi|q
+
+.
+
+i=1
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:48:36, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.014
+
+It can be shown (see, for example, Shalev-Shwartz (2007)) that the function
+
+13.7 Exercises
+
+149
+
+R(w) =
+
+1
+
+2(q − 1)
+
+(cid:9)w(cid:9)2
+
+q
+
+(cid:17)
+
+(cid:16)
+is 1-strongly convex with respect to (cid:9)w(cid:9)q. Show that if q = log(d)
+-strongly convex with respect to the (cid:9)1 norm over Rd.
+
+1
+
+3log (d)
+
+log (d)−1 then R(w) is
+
+Downloaded from https://www.cambridge.org/core. University of Sussex Library, on 05 Mar 2019 at 20:48:36, subject to the Cambridge Core terms of use, available at
+https://www.cambridge.org/core/terms. https://doi.org/10.1017/CBO9781107298019.014
+
+
