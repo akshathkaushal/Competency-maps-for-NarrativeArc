@@ -25,7 +25,7 @@ Competency Map organises a learning space in terms of basic units of learning, e
 
 [![License](https://img.shields.io/github/license/python_project/python-project)](https://github.com/akshathkaushal/Competency-maps-old/blob/master/LICENSE)
 
-This project is licensed under the terms of the `Apache Software License 2.0` license. See [LICENSE](https://github.com/WSL-IIITB/CompetencyMaps/blob/master/LICENSE) for more details.
+This project is licensed under the terms of the `Apache Software License 2.0` license. See [LICENSE](https://github.com/akshathkaushal/Competency-maps-old/blob/master/LICENSE) for more details.
 
 
 ## 📃 Citation
